@@ -1,0 +1,11 @@
+# localstack-plugin-loader project configuration
+
+[tool.black]
+line_length = 100
+include = '((plugin)/.*\.py$|tests/.*\.py$)'
+#extend_exclude = '()'
+
+[tool.isort]
+profile = 'black'
+#extend_skip = []
+line_length = 100
