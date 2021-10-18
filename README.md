@@ -28,6 +28,8 @@ It provides tools to load plugins from entry points at run time, and to discover
   * init: the `PluginFactory` of the `PluginSpec` was successfully invoked
   * loaded: the `load` method of the `Plugin` was successfully invoked
 
+![architecture](https://raw.githubusercontent.com/localstack/localstack-plugin-loader/main/docs/localstack-plugin-loader-architecture.png)
+
 ### Loading Plugins
 
 At run time, a `PluginManager` uses a `PluginFinder` that in turn uses stevedore to scan the available entrypoints for things that look like a `PluginSpec`.
