@@ -2,6 +2,7 @@ localstack-plugin-loader
 ========================
 
 <p>
+  <a href="https://github.com/localstack/localstack-plugin-loader/actions/workflows/build.yml"><img alt="CI badge" src="https://github.com/localstack/localstack-plugin-loader/actions/workflows/build.yml/badge.svg"></img></a>
   <a href="https://pypi.org/project/localstack-plugin-loader/"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/localstack-plugin-loader?color=blue"></a>
   <a href="https://img.shields.io/pypi/l/localstack-plugin-loader.svg"><img alt="PyPI License" src="https://img.shields.io/pypi/l/localstack-plugin-loader.svg"></a>
   <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
