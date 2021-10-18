@@ -50,7 +50,7 @@ PluginFactory = Callable[[], Plugin]
 
 class PluginSpec:
     """
-    A PluginSpec describes a plugin through a namespace and it's unique name within in that namespace, and holds the
+    A PluginSpec describes a plugin through a namespace and its unique name within in that namespace, and holds the
     imported code that can instantiate the plugin (a PluginFactory). In the simplest case, the PluginFactory that can
     just be the Plugin's class.
 
