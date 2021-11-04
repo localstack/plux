@@ -187,7 +187,7 @@ class FunctionPlugin(Plugin):
             return self._load(*args, **kwargs)
 
     def should_load(self) -> bool:
-        if self._should_load:
+        if self._should_load is not None:
             if type(self._should_load) == bool:
                 return self._should_load
             else:
