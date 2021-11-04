@@ -43,11 +43,15 @@ At build time (e.g., with `python setup.py develop/install/sdist`), a special `P
 In the `setup.py` we can use the `plugin.setuptools.load_entry_points` method to collect a dictionary for the `entry_points` value of `setup()`.
 
 ```python
-import plugin.setuptools.load_entry_points
+from plugin.setuptools import load_entry_points
+
 setup(
     entry_points=load_entry_points(exclude=("tests", "tests.*",))
 )
 ```
+
+Note that `load_entry_points` will try to resolve a cached version of `entry_points.txt` from the `.egg-info` directory,
+to avoid resolving the entry points when building the package from a source distribution.
 
 Examples
 --------
@@ -85,7 +89,7 @@ class MyCliPlugin(CliPlugin):
 now we need a `PluginManager` (which has a generic type) to load the plugins for us:
 
 ```python
-cli = #... needs to come from somewhere
+cli = # ... needs to come from somewhere
 
 manager: PluginManager[CliPlugin] = PluginManager("my.plugins.cli", load_args=(cli,))
 
@@ -98,27 +102,26 @@ plugins: List[CliPlugin] = manager.load_all()
 
 ### Re-usable plugins
 
-When you have lots of plugins that are structured in a similar way, we may not want to create a separate Plugin class for each plugin.
-Instead we want to use the same `Plugin` class to do the same thing, but use several instances of it.
-The `PluginFactory`, and the fact that `PluginSpec` instances defined at module level are discoverable (inpired by [pluggy](https://github.com/pytest-dev/pluggy)), can be used to achieve that.
-
+When you have lots of plugins that are structured in a similar way, we may not want to create a separate Plugin class
+for each plugin. Instead we want to use the same `Plugin` class to do the same thing, but use several instances of it.
+The `PluginFactory`, and the fact that `PluginSpec` instances defined at module level are discoverable (inpired
+by [pluggy](https://github.com/pytest-dev/pluggy)), can be used to achieve that.
 
 ```python
 
 class ServicePlugin(Plugin):
 
     def __init__(self, service_name):
-      self.service_name = service_name
-      self.service = None
+        self.service_name = service_name
+        self.service = None
 
     def should_load(self):
-        return self.service_name in config.SERVICES:
+        return self.service_name in config.SERVICES
 
     def load(self):
         module = importlib.import_module("localstack.services.%s" % self.service_name)
         # suppose we define a convention that each service module has a Service class, like moto's `Backend`
         self.service = module.Service()
-
 
 def service_plugin_factory(name) -> PluginFactory:
     def create():
@@ -144,10 +147,40 @@ class Supervisor:
     manager: PluginManager[ServicePlugin]
 
     def start(self, service_name):
-      plugin = manager.load(service_name)
-      service = plugin.service
-      service.start()
+        plugin = manager.load(service_name)
+        service = plugin.service
+        service.start()
 
+```
+
+### Functions as plugins
+
+with the `@plugin` decorator, you can expose functions as plugins. They will be wrapped by the framework
+into `FunctionPlugin` instances, which satisfy both the contract of a Plugin, and that of the function.
+
+```python
+from plugin import plugin
+
+
+@plugin(namespace="localstack.configurators")
+def configure_logging(runtime):
+    logging.basicConfig(level=runtime.config.loglevel)
+
+    
+@plugin(namespace="localstack.configurators")
+def configure_somethingelse(runtime):
+    # do other stuff with the runtime object
+    pass
+```
+
+With a PluginManager via `load_all`, you receive the `FunctionPlugin` instances, that you can call like the functions
+
+```python
+
+runtime = LocalstackRuntime()
+
+for configurator in PluginManager("localstack.configurators").load_all():
+    configurator(runtime)
 ```
 
 Install
