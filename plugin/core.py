@@ -1,4 +1,5 @@
 import abc
+import functools
 import inspect
 from typing import Any, Callable, Dict, List, Tuple, Type, Union
 
@@ -118,8 +119,9 @@ class PluginSpecResolver:
                 return PluginSpec(source.namespace, source.name, source)
 
         if inspect.isfunction(source):
-            # TODO: implement a plugin decorator and check if function is of that type.
-            pass
+            spec = getattr(source, "__pluginspec__", None)
+            if spec and isinstance(spec, PluginSpec):
+                return spec
 
         # TODO: add more options to specify plugin specs
 
@@ -157,3 +159,72 @@ class PluginLifecycleListener:  # pragma: no cover
 
     def on_load_exception(self, plugin_spec: PluginSpec, plugin: Plugin, exception: Exception):
         pass
+
+
+class FunctionPlugin(Plugin):
+    """
+    Exposes a function as a Plugin.
+    """
+
+    fn: Callable
+
+    def __init__(
+        self,
+        fn: Callable,
+        should_load: Union[bool, Callable[[], bool]] = None,
+        load: Callable = None,
+    ) -> None:
+        super().__init__()
+        self.fn = fn
+        self._should_load = should_load
+        self._load = load
+
+    def __call__(self, *args, **kwargs):
+        return self.fn(*args, **kwargs)
+
+    def load(self, *args, **kwargs):
+        if self._load:
+            return self._load(*args, **kwargs)
+
+    def should_load(self) -> bool:
+        if self._should_load:
+            if type(self._should_load) == bool:
+                return self._should_load
+            else:
+                return self._should_load()
+
+        return True
+
+
+def plugin(
+    namespace, name=None, should_load: Union[bool, Callable[[], bool]] = None, load: Callable = None
+):
+    """
+    Expose a function as discoverable and loadable FunctionPlugin.
+
+    :param namespace: the plugin namespace
+    :param name: the name of the plugin (by default the function name will be used)
+    :param should_load: optional either a boolean value or a callable returning a boolean
+    :param load: optional load function
+    :return: plugin decorator
+    """
+
+    def wrapper(fn):
+        plugin_name = name or fn.__name__
+
+        # this causes the plugin framework to point the entrypoint to the original function rather than the
+        # nested factory function (which would not be resolvable)
+        @functools.wraps(fn)
+        def factory():
+            fn_plugin = FunctionPlugin(fn, should_load=should_load, load=load)
+            fn_plugin.namespace = namespace
+            fn_plugin.name = plugin_name
+            return fn_plugin
+
+        # at discovery-time the factory will point to the method being decorated, and at load-time the factory from
+        # this spec instance be used instead of the one being created
+        fn.__pluginspec__ = PluginSpec(namespace, plugin_name, factory)
+
+        return fn
+
+    return wrapper

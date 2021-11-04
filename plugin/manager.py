@@ -246,7 +246,7 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
             if not container.is_init:
                 try:
                     LOG.debug("instantiating plugin %s", plugin_spec)
-                    container.plugin = plugin_spec.factory()
+                    container.plugin = self._plugin_from_spec(plugin_spec)
                     container.is_init = True
                     self._fire_on_init_after(plugin_spec, container.plugin)
                 except Exception as e:
@@ -279,6 +279,16 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
                     LOG.exception("error loading plugin %s", plugin_spec)
                 self._fire_on_load_exception(plugin_spec, plugin, e)
                 container.load_error = e
+
+    def _plugin_from_spec(self, plugin_spec: PluginSpec) -> P:
+        factory = plugin_spec.factory
+
+        # functional decorators can overwrite the spec factory (pointing to the decorator) with a custom factory
+        spec = getattr(factory, "__pluginspec__", None)
+        if spec:
+            factory = spec.factory
+
+        return factory()
 
     def _init_plugin_index(self) -> Dict[str, PluginContainer]:
         return {plugin.name: plugin for plugin in self._import_plugins() if plugin}

@@ -1,4 +1,5 @@
 from .core import (
+    FunctionPlugin,
     Plugin,
     PluginDisabled,
     PluginException,
@@ -6,6 +7,7 @@ from .core import (
     PluginLifecycleListener,
     PluginSpec,
     PluginType,
+    plugin,
 )
 from .manager import PluginManager, PluginSpecResolver
 
@@ -14,6 +16,7 @@ name = "plugin"
 __version__ = "1.0.0"
 
 __all__ = [
+    "FunctionPlugin",
     "Plugin",
     "PluginSpec",
     "PluginType",
@@ -23,4 +26,5 @@ __all__ = [
     "PluginSpecResolver",
     "PluginException",
     "PluginDisabled",
+    "plugin",
 ]
