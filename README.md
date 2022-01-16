@@ -1,20 +1,20 @@
-localstack-plugin-loader
-========================
+Plux
+====
 
 <p>
-  <a href="https://github.com/localstack/localstack-plugin-loader/actions/workflows/build.yml"><img alt="CI badge" src="https://github.com/localstack/localstack-plugin-loader/actions/workflows/build.yml/badge.svg"></img></a>
-  <a href="https://pypi.org/project/localstack-plugin-loader/"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/localstack-plugin-loader?color=blue"></a>
-  <a href="https://img.shields.io/pypi/l/localstack-plugin-loader.svg"><img alt="PyPI License" src="https://img.shields.io/pypi/l/localstack-plugin-loader.svg"></a>
+  <a href="https://github.com/localstack/plux/actions/workflows/build.yml"><img alt="CI badge" src="https://github.com/localstack/plux/actions/workflows/build.yml/badge.svg"></img></a>
+  <a href="https://pypi.org/project/plux/"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/plux?color=blue"></a>
+  <a href="https://img.shields.io/pypi/l/plux.svg"><img alt="PyPI License" src="https://img.shields.io/pypi/l/plux.svg"></a>
   <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
 
-localstack-plugin-loader is the dynamic code loading framework used in [LocalStack](https://github.com/localstack/localstack).
+plux is the dynamic code loading framework used in [LocalStack](https://github.com/localstack/localstack).
 
 
 Overview
 --------
 
-The localstack-plugin-loader builds a higher-level plugin mechanism around [Python's entry point mechanism](https://packaging.python.org/specifications/entry-points/).
+The plux builds a higher-level plugin mechanism around [Python's entry point mechanism](https://packaging.python.org/specifications/entry-points/).
 It provides tools to load plugins from entry points at run time, and to discover entry points from plugins at build time (so you don't have to declare entry points statically in your `setup.py`).
 
 ### Core concepts
@@ -29,7 +29,7 @@ It provides tools to load plugins from entry points at run time, and to discover
   * init: the `PluginFactory` of the `PluginSpec` was successfully invoked
   * loaded: the `load` method of the `Plugin` was successfully invoked
 
-![architecture](https://raw.githubusercontent.com/localstack/localstack-plugin-loader/main/docs/localstack-plugin-loader-architecture.png)
+![architecture](https://raw.githubusercontent.com/localstack/plux/main/docs/plux-architecture.png)
 
 ### Loading Plugins
 
@@ -186,7 +186,7 @@ for configurator in PluginManager("localstack.configurators").load_all():
 Install
 -------
 
-    pip install localstack-plugin-loader
+    pip install plux
 
 Develop
 -------

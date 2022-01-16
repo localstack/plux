@@ -8,7 +8,7 @@ venv: $(VENV_DIR)/bin/activate
 
 $(VENV_DIR)/bin/activate: setup.cfg
 	test -d $(VENV_DIR) || $(VENV_BIN) $(VENV_DIR)
-	$(VENV_ACTIVATE); pip install -e ".[dev]" && pip uninstall -y localstack-plugin-loader
+	$(VENV_ACTIVATE); pip install -e ".[dev]" && pip uninstall -y plux
 	touch $(VENV_DIR)/bin/activate
 
 clean:

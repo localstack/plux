@@ -1,4 +1,4 @@
-# localstack-plugin-loader project configuration
+# plux project configuration
 
 [tool.black]
 line_length = 100
