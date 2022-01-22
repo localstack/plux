@@ -14,7 +14,7 @@ plux is the dynamic code loading framework used in [LocalStack](https://github.c
 Overview
 --------
 
-The plux builds a higher-level plugin mechanism around [Python's entry point mechanism](https://packaging.python.org/specifications/entry-points/).
+Plux builds a higher-level plugin mechanism around [Python's entry point mechanism](https://packaging.python.org/specifications/entry-points/).
 It provides tools to load plugins from entry points at run time, and to discover entry points from plugins at build time (so you don't have to declare entry points statically in your `setup.py`).
 
 ### Core concepts
