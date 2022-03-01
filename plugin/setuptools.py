@@ -1,10 +1,64 @@
+import json
 import os
 import sys
+from distutils.command.install_egg_info import safe_name, to_filename
+from distutils.core import Command
 from typing import Optional, Tuple
 
 import pkg_resources
+from setuptools.command.egg_info import InfoCommon
 
 from .entrypoint import EntryPointDict, find_plugins
+
+
+class plugins(InfoCommon, Command):
+    description = "Discover plux plugins and store them in .egg_info"
+
+    user_options = [
+        # TODO
+    ]
+
+    egg_info: str
+
+    def initialize_options(self) -> None:
+        self.plux_json_path = None
+
+    def finalize_options(self) -> None:
+        self.plux_json_path = get_plux_json_path(self.distribution)
+
+    def run(self) -> None:
+        ep = find_plugins(exclude=("tests", "tests.*"))  # TODO: options
+
+        self.mkpath(os.path.dirname(self.plux_json_path))
+        with open(self.plux_json_path, "w") as fd:
+            json.dump(ep, fd)
+
+        update_entrypoints(self.distribution, ep)
+
+
+def load_plux_entrypoints(cmd, file_name, file_path):
+    if not os.path.exists(file_path):
+        return
+
+    with open(file_path, "r") as fd:
+        ep = json.load(fd)
+
+    update_entrypoints(cmd.distribution, ep)
+
+
+def get_plux_json_path(distribution):
+    dirs = distribution.package_dir
+    egg_base = (dirs or {}).get("", os.curdir)
+    egg_info_dir = to_filename(safe_name(distribution.get_name())) + ".egg-info"
+    egg_info_dir = os.path.join(egg_base, egg_info_dir)
+    return os.path.join(egg_info_dir, "plux.json")
+
+
+def update_entrypoints(distribution, ep: EntryPointDict):
+    if distribution.entry_points is None:
+        distribution.entry_points = {}
+
+    distribution.entry_points.update(ep)
 
 
 def load_entry_points(
