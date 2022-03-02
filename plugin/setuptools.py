@@ -6,7 +6,7 @@ from distutils.core import Command
 from typing import Optional, Tuple
 
 import pkg_resources
-from setuptools.command.egg_info import InfoCommon
+from setuptools.command.egg_info import InfoCommon, write_entries
 
 from .entrypoint import EntryPointDict, find_plugins
 
@@ -27,8 +27,10 @@ class plugins(InfoCommon, Command):
         self.plux_json_path = get_plux_json_path(self.distribution)
 
     def run(self) -> None:
+        self.debug_print("finding plugins...")
         ep = find_plugins(exclude=("tests", "tests.*"))  # TODO: options
 
+        self.debug_print(f"writing discovered plugins into {self.plux_json_path}")
         self.mkpath(os.path.dirname(self.plux_json_path))
         with open(self.plux_json_path, "w") as fd:
             json.dump(ep, fd)
@@ -40,10 +42,17 @@ def load_plux_entrypoints(cmd, file_name, file_path):
     if not os.path.exists(file_path):
         return
 
+    cmd.debug_print(f"extend entrypoints with plux plugins from {file_path}")
     with open(file_path, "r") as fd:
         ep = json.load(fd)
 
     update_entrypoints(cmd.distribution, ep)
+
+    # this is kind of a hack, but we cannot rely on load_plux_entrypoints being called before the regular
+    # entry_points.txt egg_info.writers plugin to write the updated entry points
+    ep_file = "entry_points.txt"
+    ep_path = os.path.join(os.path.dirname(file_path), ep_file)
+    write_entries(cmd, ep_file, ep_path)
 
 
 def get_plux_json_path(distribution):
@@ -58,6 +67,7 @@ def update_entrypoints(distribution, ep: EntryPointDict):
     if distribution.entry_points is None:
         distribution.entry_points = {}
 
+    # TODO: merge entry point groups
     distribution.entry_points.update(ep)
 
 
