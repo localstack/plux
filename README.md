@@ -179,6 +179,21 @@ for configurator in PluginManager("localstack.configurators").load_all():
     configurator(runtime)
 ```
 
+Configuring your distribution
+-----------------------------
+
+If you are building a python distribution that exposes plugins discovered by plux, you need to configure your projects build system so other dependencies creates the `entry_points.txt` file when installing your distribution.
+
+For a [`pyproject.toml`](https://pip.pypa.io/en/stable/reference/build-system/pyproject-toml/) template this involves adding the `build-system` section:
+
+```toml
+[build-system]
+requires = ['setuptools', 'wheel', 'plux>=1.3.1']
+build-backend = "setuptools.build_meta"
+
+# ...
+```
+
 Install
 -------
 
