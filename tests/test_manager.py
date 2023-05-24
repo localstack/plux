@@ -111,11 +111,14 @@ class TestPluginManager:
             ]
         )
 
-        manager: PluginManager[DummyPlugin] = PluginManager("test.plugins.dummy", finder=finder)
+        manager: PluginManager[DummyPlugin] = PluginManager(
+            "test.plugins.dummy", finder=finder, load_kwargs={"foo": "bar"}
+        )
 
         plugins = manager.load_all()
         assert len(plugins[0].load_calls) == 1
         assert len(plugins[1].load_calls) == 1
+        assert plugins[0].load_calls[0][1] == {"foo": "bar"}
 
         plugins = manager.load_all()
         assert len(plugins[0].load_calls) == 1
