@@ -270,7 +270,7 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
             self._fire_on_load_before(plugin_spec, plugin, args, kwargs)
             try:
                 LOG.debug("loading plugin %s:%s", self.namespace, plugin_spec.name)
-                result = plugin.load(*args, *kwargs)
+                result = plugin.load(*args, **kwargs)
                 self._fire_on_load_after(plugin_spec, plugin, result)
                 container.load_value = result
                 container.is_loaded = True
