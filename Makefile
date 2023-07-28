@@ -20,7 +20,7 @@ clean-dist: clean
 	rm -rf dist/
 
 format:
-	($(VENV_ACTIVATE); python -m isort .; python -m black . )
+	$(VENV_ACTIVATE); python -m isort .; python -m black .
 
 build: venv
 	$(VENV_ACTIVATE); python setup.py build
