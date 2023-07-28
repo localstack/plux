@@ -11,6 +11,7 @@ from .core import (
     PluginSpec,
     PluginSpecResolver,
 )
+from .metadata import resolve_distribution_information
 
 LOG = logging.getLogger(__name__)
 
@@ -113,6 +114,15 @@ class PluginContainer(Generic[P]):
 
     init_error: Exception = None
     load_error: Exception = None
+
+    @property
+    def distribution(self):
+        """
+        Uses metadata from importlib to resolve the distribution information for this plugin.
+
+        :return: the importlib.metadata.Distribution object
+        """
+        return resolve_distribution_information(self.plugin_spec)
 
 
 class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
