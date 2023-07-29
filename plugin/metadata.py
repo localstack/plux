@@ -1,13 +1,13 @@
 import inspect
 from functools import lru_cache
 from importlib import metadata
-from typing import Mapping, Optional
+from typing import Mapping, Optional, List
 
 from .core import PluginSpec
 
 
 @lru_cache()
-def packages_distributions() -> Mapping[str, list[str]]:
+def packages_distributions() -> Mapping[str, List[str]]:
     """
     Cache wrapper around metadata.packages_distributions, which returns a mapping of top-level packages to
     their distributions.
