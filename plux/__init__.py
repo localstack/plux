@@ -1,4 +1,6 @@
-from .core import (
+# TODO: should start to migrate things from the plugin package to plux
+from plugin import __version__ as _version
+from plugin.core import (
     FunctionPlugin,
     Plugin,
     PluginDisabled,
@@ -9,14 +11,13 @@ from .core import (
     PluginType,
     plugin,
 )
-from .manager import PluginManager, PluginSpecResolver
+from plugin.manager import PluginManager, PluginSpecResolver
 
-name = "plugin"
+name = "plux"
 
-__version__ = "1.3.3"
+__version__ = _version
 
 __all__ = [
-    "__version__",
     "FunctionPlugin",
     "Plugin",
     "PluginSpec",
