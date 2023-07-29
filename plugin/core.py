@@ -31,10 +31,6 @@ class Plugin(abc.ABC):
     name: str
     requirements: List[str]
 
-    def is_active(self) -> bool:
-        # FIXME: remove after release (would currently break localstack-ext)
-        return self.should_load()
-
     def should_load(self) -> bool:
         return True
 
@@ -56,9 +52,9 @@ class PluginSpec:
     just be the Plugin's class.
 
     Internally a PluginSpec is essentially a wrapper around an importlib EntryPoint. An entrypoint is a tuple: (
-    "name", "module:object") inside a namespace that can be loaded. The entrypoint object of a LocalStack Plugin can
-    point to to a PluginSpec, or a Plugin that defines it's own namespace and name, in which case the PluginSpec will
-    be instantiated dynamically by, e.g., a PluginSpecResolver.
+    "name", "module:object") inside a namespace that can be loaded. The entrypoint object of a Plugin can point to a
+    PluginSpec, or a Plugin that defines its own namespace and name, in which case the PluginSpec will be instantiated
+    dynamically by, e.g., a PluginSpecResolver.
     """
 
     namespace: str
@@ -108,6 +104,7 @@ class PluginSpecResolver:
     def resolve(self, source: Any) -> PluginSpec:
         """
         Tries to create a PluginSpec from the given source.
+
         :param source: anything that can produce a PluginSpec (Plugin class, ...)
         :return: a PluginSpec instance
         """
