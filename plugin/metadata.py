@@ -1,7 +1,12 @@
 import inspect
 from functools import lru_cache
-from importlib import metadata
-from typing import Mapping, Optional, List
+
+try:
+    from importlib import metadata
+except ImportError:
+    import importlib_metadata as metadata
+
+from typing import List, Mapping, Optional
 
 from .core import PluginSpec
 
