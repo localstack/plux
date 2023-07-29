@@ -8,5 +8,5 @@ def test_resolve_distribution_information():
     # fake a plugin spec and use pytest as test object
     fake_plugin_spec = PluginSpec("foo", "bar", pytest.fixture)
     dist = resolve_distribution_information(fake_plugin_spec)
-    assert dist.name == "pytest"
+    assert dist.metadata["Name"] == "pytest"
     assert dist.metadata["License"] == "MIT"
