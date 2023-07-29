@@ -1,14 +1,27 @@
+import collections
 import inspect
+import sys
 from functools import lru_cache
+from typing import List, Mapping, Optional
 
 try:
     from importlib import metadata
 except ImportError:
     import importlib_metadata as metadata
 
-from typing import List, Mapping, Optional
-
 from .core import PluginSpec
+
+if sys.version_info >= (3, 10):
+    from importlib.metadata import packages_distributions as metadata_packages_distributions
+else:
+
+    def metadata_packages_distributions() -> Mapping[str, List[str]]:
+        """Copied from Pyton 3.10 stdlib."""
+        pkg_to_dist = collections.defaultdict(list)
+        for dist in metadata.distributions():
+            for pkg in (dist.read_text("top_level.txt") or "").split():
+                pkg_to_dist[pkg].append(dist.metadata["Name"])
+        return dict(pkg_to_dist)
 
 
 @lru_cache()
@@ -19,7 +32,7 @@ def packages_distributions() -> Mapping[str, List[str]]:
 
     :return: package to distribution mapping
     """
-    return metadata.packages_distributions()
+    return metadata_packages_distributions()
 
 
 def resolve_distribution_information(plugin_spec: PluginSpec) -> Optional[metadata.Distribution]:
