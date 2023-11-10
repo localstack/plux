@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -179,4 +180,15 @@ class TestPluginManager:
         assert ex.value.namespace == "test.plugins.dummy"
         assert ex.value.name == "shouldnotload"
 
-    # TODO: test lifecycle listeners
+    def test_lifecycle_listener(self, dummy_plugin_finder):
+        listener = MagicMock()
+
+        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder, listener=listener)
+        manager.load_all()
+
+        assert listener.on_init_after.call_count == 4
+        assert listener.on_init_exception.call_count == 1
+        assert listener.on_load_after.call_count == 2
+
+        container = manager.get_container("shouldalsoload")
+        listener.on_load_after.assert_called_with(container.plugin_spec, container.plugin, None)

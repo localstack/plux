@@ -42,59 +42,66 @@ class PluginLifecycleNotifierMixin:
     Mixin that provides functions to dispatch calls to a PluginLifecycleListener in a safe way.
     """
 
-    listener: PluginLifecycleListener
+    listeners: List[PluginLifecycleListener]
 
     def _fire_on_resolve_after(self, plugin_spec):
-        _call_safe(
-            self.listener.on_resolve_after,
-            (plugin_spec,),  #
-            "error while calling on_resolve_after",
-        )
+        for listener in self.listeners:
+            _call_safe(
+                listener.on_resolve_after,
+                (plugin_spec,),  #
+                "error while calling on_resolve_after",
+            )
 
     def _fire_on_resolve_exception(self, namespace, entrypoint, exception):
-        _call_safe(
-            self.listener.on_resolve_exception,
-            (namespace, entrypoint, exception),
-            "error while calling on_resolve_exception",
-        )
+        for listener in self.listeners:
+            _call_safe(
+                listener.on_resolve_exception,
+                (namespace, entrypoint, exception),
+                "error while calling on_resolve_exception",
+            )
 
     def _fire_on_init_after(self, plugin_spec, plugin):
-        _call_safe(
-            self.listener.on_init_after,
-            (
-                plugin_spec,
-                plugin,
-            ),  #
-            "error while calling on_init_after",
-        )
+        for listener in self.listeners:
+            _call_safe(
+                listener.on_init_after,
+                (
+                    plugin_spec,
+                    plugin,
+                ),  #
+                "error while calling on_init_after",
+            )
 
     def _fire_on_init_exception(self, plugin_spec, exception):
-        _call_safe(
-            self.listener.on_init_exception,
-            (plugin_spec, exception),
-            "error while calling on_init_exception",
-        )
+        for listener in self.listeners:
+            _call_safe(
+                listener.on_init_exception,
+                (plugin_spec, exception),
+                "error while calling on_init_exception",
+            )
 
     def _fire_on_load_before(self, plugin_spec, plugin, load_args, load_kwargs):
-        _call_safe(
-            self.listener.on_load_before,
-            (plugin_spec, plugin, load_args, load_kwargs),
-            "error while calling on_load_before",
-        )
+        for listener in self.listeners:
+            _call_safe(
+                listener.on_load_before,
+                (plugin_spec, plugin, load_args, load_kwargs),
+                "error while calling on_load_before",
+            )
 
     def _fire_on_load_after(self, plugin_spec, plugin, result):
-        _call_safe(
-            self.listener.on_load_after,
-            (plugin_spec, plugin, result),
-            "error while calling on_load_after",
-        )
+        for listener in self.listeners:
+            _call_safe(
+                listener.on_load_after,
+                (plugin_spec, plugin, result),
+                "error while calling on_load_after",
+            )
 
     def _fire_on_load_exception(self, plugin_spec, plugin, exception):
-        _call_safe(
-            self.listener.on_load_exception,
-            (plugin_spec, plugin, exception),
-            "error while calling on_load_exception",
-        )
+        for listener in self.listeners:
+            _call_safe(
+                listener.on_load_exception,
+                (plugin_spec, plugin, exception),
+                "error while calling on_load_exception",
+            )
 
 
 class PluginContainer(Generic[P]):
@@ -142,14 +149,14 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
 
     load_args: Union[List, Tuple]
     load_kwargs: Dict[str, Any]
-    listener: PluginLifecycleListener
+    listeners: List[PluginLifecycleListener]
 
     def __init__(
         self,
         namespace: str,
         load_args: Union[List, Tuple] = None,
         load_kwargs: Dict = None,
-        listener: PluginLifecycleListener = None,
+        listener: Union[PluginLifecycleListener, Iterable[PluginLifecycleListener]] = None,
         finder: PluginFinder = None,
     ):
         self.namespace = namespace
@@ -157,13 +164,23 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
         self.load_args = load_args or list()
         self.load_kwargs = load_kwargs or dict()
 
-        self.listener = listener or PluginLifecycleListener()
+        if listener:
+            if isinstance(listener, (list, set, tuple)):
+                self.listeners = list(listener)
+            else:
+                self.listeners = [listener]
+        else:
+            self.listeners = []
+
         self.finder = finder or StevedorePluginFinder(
             self.namespace, self._fire_on_resolve_exception
         )
 
         self._plugin_index = None
         self._init_mutex = threading.RLock()
+
+    def add_listener(self, listener: PluginLifecycleListener):
+        self.listeners.append(listener)
 
     def load(self, name: str) -> P:
         """
