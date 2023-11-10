@@ -12,8 +12,11 @@ class PluginException(Exception):
 
 
 class PluginDisabled(PluginException):
-    def __init__(self, namespace: str, name: str):
-        super(PluginDisabled, self).__init__("plugin %s:%s is disabled" % (namespace, name))
+    def __init__(self, namespace: str, name: str, reason: str = None):
+        message = f"plugin {namespace}:{name} is disabled"
+        if reason:
+            message = f"{message}, reason: {reason}"
+        super(PluginDisabled, self).__init__(message)
         self.namespace = namespace
         self.name = name
 
