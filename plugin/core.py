@@ -1,7 +1,7 @@
 import abc
 import functools
 import inspect
-from typing import Any, Callable, Dict, List, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Tuple, Type, Union
 
 
 class PluginException(Exception):
@@ -159,6 +159,46 @@ class PluginLifecycleListener:  # pragma: no cover
 
     def on_load_exception(self, plugin_spec: PluginSpec, plugin: Plugin, exception: Exception):
         pass
+
+
+class CompositePluginLifecycleListener(PluginLifecycleListener):
+    """A PluginLifecycleListener decorator that dispatches to multiple delegates."""
+
+    listeners: List[PluginLifecycleListener]
+
+    def __init__(self, initial: Iterable[PluginLifecycleListener] = None):
+        self.listeners = list(initial) if initial else []
+
+    def add_listener(self, listener: PluginLifecycleListener):
+        self.listeners.append(listener)
+
+    def on_resolve_exception(self, *args, **kwargs):
+        for listener in self.listeners:
+            listener.on_resolve_exception(*args, **kwargs)
+
+    def on_resolve_after(self, *args, **kwargs):
+        for listener in self.listeners:
+            listener.on_resolve_after(*args, **kwargs)
+
+    def on_init_exception(self, *args, **kwargs):
+        for listener in self.listeners:
+            listener.on_init_exception(*args, **kwargs)
+
+    def on_init_after(self, *args, **kwargs):
+        for listener in self.listeners:
+            listener.on_init_after(*args, **kwargs)
+
+    def on_load_before(self, *args, **kwargs):
+        for listener in self.listeners:
+            listener.on_load_before(*args, **kwargs)
+
+    def on_load_after(self, *args, **kwargs):
+        for listener in self.listeners:
+            listener.on_load_after(*args, **kwargs)
+
+    def on_load_exception(self, *args, **kwargs):
+        for listener in self.listeners:
+            listener.on_load_exception(*args, **kwargs)
 
 
 class FunctionPlugin(Plugin):
