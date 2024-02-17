@@ -5,7 +5,6 @@ A plux frontend.
 import argparse
 import json
 import os
-import sys
 
 from plugin.entrypoint import find_plugins
 from plugin.setuptools import _get_egg_info_dir, get_distribution_from_workdir, get_plux_json_path
@@ -52,7 +51,6 @@ def _pprint_plux_json(plux_json):
 
 
 def main(argv=None):
-    argv = argv or sys.argv
     parser = argparse.ArgumentParser(description="Plux CLI frontend")
     parser.add_argument(
         "--workdir",
@@ -77,6 +75,7 @@ def main(argv=None):
     show_parser.set_defaults(func=show)
 
     args = parser.parse_args(argv)
+
     os.chdir(args.workdir)
 
     if not hasattr(args, "func"):
