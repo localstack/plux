@@ -1,13 +1,14 @@
 import json
 import os
+import re
 import sys
 from typing import Optional, Tuple
 
-import pkg_resources
 import setuptools
 from setuptools.command.egg_info import InfoCommon, write_entries
 
-from .entrypoint import EntryPointDict, find_plugins
+from .entrypoint import EntryPointDict, find_plugins, to_entry_point_dict
+from .metadata import Distribution
 
 
 class plugins(InfoCommon, setuptools.Command):
@@ -57,9 +58,7 @@ def load_plux_entrypoints(cmd, file_name, file_path):
 def get_plux_json_path(distribution):
     dirs = distribution.package_dir
     egg_base = (dirs or {}).get("", os.curdir)
-    egg_info_dir = (
-        pkg_resources.to_filename(pkg_resources.safe_name(distribution.get_name())) + ".egg-info"
-    )
+    egg_info_dir = _to_filename(_safe_name(distribution.get_name())) + ".egg-info"
     egg_info_dir = os.path.join(egg_base, egg_info_dir)
     return os.path.join(egg_info_dir, "plux.json")
 
@@ -118,10 +117,8 @@ def entry_points_from_egg_info(egg_info_dir: str) -> EntryPointDict:
     """
     Reads the entry_points.txt from a distribution meta dir (e.g., the .egg-info directory).
     """
-    dist = _get_dist(egg_info_dir)
-    entry_map = pkg_resources.get_entry_map(dist)
-
-    return {group: [str(ep) for ep in ep_map.values()] for group, ep_map in entry_map.items()}
+    dist = Distribution.at(egg_info_dir)
+    return to_entry_point_dict(dist.entry_points)
 
 
 def _has_entry_points_cache() -> bool:
@@ -193,19 +190,6 @@ def _get_egg_info_dir() -> Optional[str]:
     return None
 
 
-def _get_dist(egg_info_dir: str):
-    # based on pip._internal.req.req_install._get_dist
-    base_dir, dist_dir_name = os.path.split(egg_info_dir)
-    dist_name = os.path.splitext(dist_dir_name)[0]
-    metadata = pkg_resources.PathMetadata(base_dir, dist_dir_name)
-
-    return pkg_resources.Distribution(
-        base_dir,
-        project_name=dist_name,
-        metadata=metadata,
-    )
-
-
 def get_distribution_from_workdir(workdir: str) -> setuptools.Distribution:
     """
     Reads from the current workdir the available project configs and parses them to create a
@@ -231,3 +215,19 @@ def get_distribution_from_workdir(workdir: str) -> setuptools.Distribution:
         dist.script_name = config_files[0]
 
     return dist
+
+
+def _safe_name(name):
+    """Convert an arbitrary string to a standard distribution name. Copied from pkg_resources.
+
+    Any runs of non-alphanumeric/. characters are replaced with a single '-'.
+    """
+    return re.sub("[^A-Za-z0-9.]+", "-", name)
+
+
+def _to_filename(name):
+    """Convert a project or version name to its filename-escaped form. Copied from pkg_resources.
+
+    Any '-' characters are currently replaced with '_'.
+    """
+    return name.replace("-", "_")
