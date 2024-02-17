@@ -1,8 +1,6 @@
 import json
 import os
 import sys
-from distutils.command.install_egg_info import safe_name, to_filename
-from distutils.core import Command
 from typing import Optional, Tuple
 
 import pkg_resources
@@ -12,7 +10,7 @@ from setuptools.command.egg_info import InfoCommon, write_entries
 from .entrypoint import EntryPointDict, find_plugins
 
 
-class plugins(InfoCommon, Command):
+class plugins(InfoCommon, setuptools.Command):
     description = "Discover plux plugins and store them in .egg_info"
 
     user_options = [
@@ -59,7 +57,9 @@ def load_plux_entrypoints(cmd, file_name, file_path):
 def get_plux_json_path(distribution):
     dirs = distribution.package_dir
     egg_base = (dirs or {}).get("", os.curdir)
-    egg_info_dir = to_filename(safe_name(distribution.get_name())) + ".egg-info"
+    egg_info_dir = (
+        pkg_resources.to_filename(pkg_resources.safe_name(distribution.get_name())) + ".egg-info"
+    )
     egg_info_dir = os.path.join(egg_base, egg_info_dir)
     return os.path.join(egg_info_dir, "plux.json")
 
