@@ -6,6 +6,7 @@ from distutils.core import Command
 from typing import Optional, Tuple
 
 import pkg_resources
+import setuptools
 from setuptools.command.egg_info import InfoCommon, write_entries
 
 from .entrypoint import EntryPointDict, find_plugins
@@ -203,3 +204,30 @@ def _get_dist(egg_info_dir: str):
         project_name=dist_name,
         metadata=metadata,
     )
+
+
+def get_distribution_from_workdir(workdir: str) -> setuptools.Distribution:
+    """
+    Reads from the current workdir the available project configs and parses them to create a
+    ``setuptools.Distribution`` object, which can later be used to invoke distutils commands.
+
+    :param workdir: the workdir containing the project files
+    :return: a distribution object
+    """
+    config_files = ["pyproject.toml", "setup.cfg"]
+    config_files = [os.path.join(workdir, file) for file in config_files]
+    config_files = [file for file in config_files if os.path.exists(file)]
+
+    if not config_files:
+        raise ValueError(f"no distribution config files found in {workdir}")
+
+    dist = setuptools.Distribution()
+    dist.parse_config_files(config_files)
+    if os.path.exists("setup.py"):
+        # use setup.py script if available
+        dist.script_name = os.path.join(workdir, "setup.py")
+    else:
+        # else use a bogus file (seems to work regardless)
+        dist.script_name = config_files[0]
+
+    return dist
