@@ -24,6 +24,9 @@ else:
         return dict(pkg_to_dist)
 
 
+Distribution = metadata.Distribution
+
+
 @lru_cache()
 def packages_distributions() -> Mapping[str, List[str]]:
     """
@@ -35,7 +38,7 @@ def packages_distributions() -> Mapping[str, List[str]]:
     return metadata_packages_distributions()
 
 
-def resolve_distribution_information(plugin_spec: PluginSpec) -> Optional[metadata.Distribution]:
+def resolve_distribution_information(plugin_spec: PluginSpec) -> Optional[Distribution]:
     """
     Resolves for a PluginSpec the python distribution package it comes from. Currently, this raises an
     error for plugins that come from a namespace package (i.e., when a package is part of multiple

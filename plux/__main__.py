@@ -4,13 +4,14 @@ A plux frontend.
 
 import argparse
 import json
+import logging
 import os
 
 from plugin.entrypoint import find_plugins
 from plugin.setuptools import _get_egg_info_dir, get_distribution_from_workdir, get_plux_json_path
 
 
-def generate(args):
+def entrypoints(args):
     dist = get_distribution_from_workdir(args.workdir)
 
     print("discovering plugins ...")
@@ -58,13 +59,14 @@ def main(argv=None):
         default=os.getcwd(),
         help="overwrite the working directory",
     )
+    parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose logging")
     subparsers = parser.add_subparsers(title="commands", dest="command", help="Available commands")
 
     # Subparser for the 'generate' subcommand
     generate_parser = subparsers.add_parser(
         "entrypoints", help="Discover plugins and generate entry points"
     )
-    generate_parser.set_defaults(func=generate)
+    generate_parser.set_defaults(func=entrypoints)
 
     # Subparser for the 'discover' subcommand
     discover_parser = subparsers.add_parser("discover", help="Discover plugins and print them")
@@ -75,6 +77,9 @@ def main(argv=None):
     show_parser.set_defaults(func=show)
 
     args = parser.parse_args(argv)
+
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
 
     os.chdir(args.workdir)
 
