@@ -1,24 +1,25 @@
 import logging
 import threading
-from typing import Any, Callable, Dict, Generic, Iterable, List, Tuple, TypeVar, Union
+import typing as t
 
-from .core import (
+from plux.core.plugin import (
     Plugin,
     PluginDisabled,
     PluginException,
     PluginFinder,
     PluginLifecycleListener,
     PluginSpec,
-    PluginSpecResolver,
 )
-from .metadata import resolve_distribution_information
+
+from .metadata import Distribution, resolve_distribution_information
+from .resolve import StevedorePluginFinder
 
 LOG = logging.getLogger(__name__)
 
-P = TypeVar("P", bound=Plugin)
+P = t.TypeVar("P", bound=Plugin)
 
 
-def _call_safe(func: Callable, args: Tuple, exception_message: str):
+def _call_safe(func: t.Callable, args: t.Tuple, exception_message: str):
     """
     Call the given function with the given arguments, and if it fails, log the given exception_message.
     If logging.DEBUG is set for the logger, then we also log the traceback.
@@ -42,7 +43,7 @@ class PluginLifecycleNotifierMixin:
     Mixin that provides functions to dispatch calls to a PluginLifecycleListener in a safe way.
     """
 
-    listeners: List[PluginLifecycleListener]
+    listeners: t.List[PluginLifecycleListener]
 
     def _fire_on_resolve_after(self, plugin_spec):
         for listener in self.listeners:
@@ -104,7 +105,7 @@ class PluginLifecycleNotifierMixin:
             )
 
 
-class PluginContainer(Generic[P]):
+class PluginContainer(t.Generic[P]):
     """
     Object to pass around the plugin state inside a PluginManager.
     """
@@ -114,7 +115,7 @@ class PluginContainer(Generic[P]):
 
     plugin_spec: PluginSpec
     plugin: P = None
-    load_value: Any = None
+    load_value: t.Any = None
 
     is_init: bool = False
     is_loaded: bool = False
@@ -123,7 +124,7 @@ class PluginContainer(Generic[P]):
     load_error: Exception = None
 
     @property
-    def distribution(self):
+    def distribution(self) -> Distribution:
         """
         Uses metadata from importlib to resolve the distribution information for this plugin.
 
@@ -132,7 +133,7 @@ class PluginContainer(Generic[P]):
         return resolve_distribution_information(self.plugin_spec)
 
 
-class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
+class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
     """
     Manages Plugins within a namespace discovered by a PluginFinder. The default mechanism is to resolve plugins from
     entry points using a StevedorePluginFinder.
@@ -147,16 +148,16 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
 
     namespace: str
 
-    load_args: Union[List, Tuple]
-    load_kwargs: Dict[str, Any]
-    listeners: List[PluginLifecycleListener]
+    load_args: t.Union[t.List, t.Tuple]
+    load_kwargs: t.Dict[str, t.Any]
+    listeners: t.List[PluginLifecycleListener]
 
     def __init__(
         self,
         namespace: str,
-        load_args: Union[List, Tuple] = None,
-        load_kwargs: Dict = None,
-        listener: Union[PluginLifecycleListener, Iterable[PluginLifecycleListener]] = None,
+        load_args: t.Union[t.List, t.Tuple] = None,
+        load_kwargs: t.Dict = None,
+        listener: t.Union[PluginLifecycleListener, t.Iterable[PluginLifecycleListener]] = None,
         finder: PluginFinder = None,
     ):
         self.namespace = namespace
@@ -207,7 +208,7 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
 
         return container.plugin
 
-    def load_all(self, propagate_exceptions=False) -> List[P]:
+    def load_all(self, propagate_exceptions=False) -> t.List[P]:
         """
         Attempts to load all plugins found in the namespace, and returns those that were loaded successfully. If
         propagate_exception is set to True, then the method will re-raise any errors as soon as it encouters them.
@@ -232,13 +233,13 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
 
         return plugins
 
-    def list_plugin_specs(self) -> List[PluginSpec]:
+    def list_plugin_specs(self) -> t.List[PluginSpec]:
         return [container.plugin_spec for container in self._plugins.values()]
 
-    def list_names(self) -> List[str]:
+    def list_names(self) -> t.List[str]:
         return [spec.name for spec in self.list_plugin_specs()]
 
-    def list_containers(self) -> List[PluginContainer[P]]:
+    def list_containers(self) -> t.List[PluginContainer[P]]:
         return list(self._plugins.values())
 
     def get_container(self, name: str) -> PluginContainer[P]:
@@ -251,7 +252,7 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
         return self._require_plugin(name).is_loaded
 
     @property
-    def _plugins(self) -> Dict[str, PluginContainer[P]]:
+    def _plugins(self) -> t.Dict[str, PluginContainer[P]]:
         if self._plugin_index is None:
             with self._init_mutex:
                 if self._plugin_index is None:
@@ -317,10 +318,10 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
 
         return factory()
 
-    def _init_plugin_index(self) -> Dict[str, PluginContainer]:
+    def _init_plugin_index(self) -> t.Dict[str, PluginContainer]:
         return {plugin.name: plugin for plugin in self._import_plugins() if plugin}
 
-    def _import_plugins(self) -> Iterable[PluginContainer]:
+    def _import_plugins(self) -> t.Iterable[PluginContainer]:
         for spec in self.finder.find_plugins():
             self._fire_on_resolve_after(spec)
 
@@ -335,56 +336,3 @@ class PluginManager(PluginLifecycleNotifierMixin, Generic[P]):
         container.name = plugin_spec.name
         container.plugin_spec = plugin_spec
         return container
-
-
-class StevedorePluginFinder(PluginFinder):
-    """
-    Uses a stevedore.Extension manager to resolve PluginSpec instances from entry points.
-    """
-
-    def __init__(
-        self,
-        namespace: str,
-        on_resolve_exception_callback: Callable[[str, Any, Exception], None] = None,
-        spec_resolver: PluginSpecResolver = None,
-    ) -> None:
-        super().__init__()
-        self.namespace = namespace
-        self.on_resolve_exception_callback = on_resolve_exception_callback
-        self.spec_resolver = spec_resolver or PluginSpecResolver()
-
-    def find_plugins(self) -> List[PluginSpec]:
-        from stevedore import ExtensionManager
-        from stevedore.exception import NoMatches
-
-        manager = ExtensionManager(
-            self.namespace,
-            invoke_on_load=False,
-            on_load_failure_callback=self._on_load_failure_callback,
-        )
-
-        # creates for each loadable stevedore extension a PluginSpec
-        try:
-            return manager.map(self.to_plugin_spec)
-        except NoMatches:
-            LOG.debug("no extensions found in namespace %s", self.namespace)
-            return []
-
-    def to_plugin_spec(self, ext) -> PluginSpec:
-        """
-        Convert a stevedore extension into a PluginSpec by using a spec_resolver.
-        """
-        try:
-            return self.spec_resolver.resolve(ext.plugin)
-        except Exception as e:
-            if LOG.isEnabledFor(logging.DEBUG):
-                LOG.exception(
-                    "error resolving PluginSpec for plugin %s.%s", self.namespace, ext.name
-                )
-
-            self.on_resolve_exception_callback(self.namespace, ext.entry_point, e)
-
-    def _on_load_failure_callback(self, _mgr, entrypoint, exception):
-        if LOG.isEnabledFor(logging.DEBUG):
-            LOG.error("error importing entrypoint %s: %s", entrypoint, exception)
-        self.on_resolve_exception_callback(self.namespace, entrypoint, exception)

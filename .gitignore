@@ -132,3 +132,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# don't ignore build package
+!plux/build
