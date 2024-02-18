@@ -1,4 +1,5 @@
-from .core import (
+from plux import __version__ as _version
+from plux.core.plugin import (
     FunctionPlugin,
     Plugin,
     PluginDisabled,
@@ -6,14 +7,15 @@ from .core import (
     PluginFinder,
     PluginLifecycleListener,
     PluginSpec,
+    PluginSpecResolver,
     PluginType,
     plugin,
 )
-from .manager import PluginManager, PluginSpecResolver
+from plux.runtime.manager import PluginManager
 
 name = "plugin"
 
-__version__ = "1.6.0"
+__version__ = _version
 
 __all__ = [
     "__version__",

@@ -63,6 +63,7 @@ This is easy, as the classes are discoverable as plugins.
 Simply create a Plugin class with a name and namespace and it will be discovered by the build time `PluginFinder`.
 
 ```python
+from plux import Plugin
 
 # abstract case (not discovered at build time, missing name)
 class CliPlugin(Plugin):
@@ -105,6 +106,8 @@ The `PluginFactory`, and the fact that `PluginSpec` instances defined at module 
 by [pluggy](https://github.com/pytest-dev/pluggy)), can be used to achieve that.
 
 ```python
+from plux import Plugin, PluginFactory, PluginSpec
+import importlib
 
 class ServicePlugin(Plugin):
 
@@ -139,12 +142,13 @@ dynamodb = PluginSpec("localstack.plugins.services", "dynamodb", service_plugin_
 Then we could use the `PluginManager` to build a Supervisor
 
 ```python
+from plux import PluginManager
 
 class Supervisor:
     manager: PluginManager[ServicePlugin]
 
     def start(self, service_name):
-        plugin = manager.load(service_name)
+        plugin = self.manager.load(service_name)
         service = plugin.service
         service.start()
 
@@ -157,7 +161,6 @@ into `FunctionPlugin` instances, which satisfy both the contract of a Plugin, an
 
 ```python
 from plugin import plugin
-
 
 @plugin(namespace="localstack.configurators")
 def configure_logging(runtime):

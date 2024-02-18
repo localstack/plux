@@ -1,32 +1,36 @@
 # TODO: should start to migrate things from the plugin package to plux
-from plugin import __version__ as _version
-from plugin.core import (
+from plux.core.plugin import (
+    CompositePluginLifecycleListener,
     FunctionPlugin,
     Plugin,
     PluginDisabled,
     PluginException,
+    PluginFactory,
     PluginFinder,
     PluginLifecycleListener,
     PluginSpec,
+    PluginSpecResolver,
     PluginType,
     plugin,
 )
-from plugin.manager import PluginManager, PluginSpecResolver
+from plux.runtime.manager import PluginContainer, PluginManager
 
 name = "plux"
 
-__version__ = _version
+__version__ = "2.0.0"
 
 __all__ = [
     "FunctionPlugin",
     "Plugin",
-    "PluginSpec",
-    "PluginType",
-    "PluginLifecycleListener",
-    "PluginFinder",
-    "PluginManager",
-    "PluginSpecResolver",
-    "PluginException",
     "PluginDisabled",
+    "PluginException",
+    "PluginFactory",
+    "PluginFinder",
+    "PluginLifecycleListener",
+    "PluginManager",
+    "PluginContainer",
+    "PluginSpec",
+    "PluginSpecResolver",
+    "PluginType",
     "plugin",
 ]
