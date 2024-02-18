@@ -2,14 +2,8 @@ import collections
 import inspect
 import sys
 from functools import lru_cache
+from importlib import metadata
 from typing import List, Mapping, Optional
-
-try:
-    from importlib import metadata
-except ImportError:
-    import importlib_metadata as metadata
-
-from .core import PluginSpec
 
 if sys.version_info >= (3, 10):
     from importlib.metadata import packages_distributions as metadata_packages_distributions
@@ -23,6 +17,8 @@ else:
                 pkg_to_dist[pkg].append(dist.metadata["Name"])
         return dict(pkg_to_dist)
 
+
+from .core import PluginSpec
 
 Distribution = metadata.Distribution
 
