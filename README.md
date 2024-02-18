@@ -40,13 +40,14 @@ If an error occurs at any state of the lifecycle, the `PluginManager` informs th
 ### Discovering entrypoints
 
 To build a source distribution and a wheel of your code with your plugins as entrypoints, simply run `python setup.py plugins sdist bdist_wheel`.
+If you don't have a `setup.py`, you can use the plux build frontend and run `python -m plux entrypoints`.
 
 How it works:
 For discovering plugins at build time, plux provides a custom setuptools command `plugins`, invoked via `python setup.py plugins`.
 The command uses a special `PluginFinder` that collects from the codebase anything that can be interpreted as a `PluginSpec`, and creates from it a plugin index file `plux.json`, that is placed into the `.egg-info` distribution metadata directory.
 When a setuptools command is used to create the distribution (e.g., `python setup.py sdist/bdist_wheel/...`), plux finds the `plux.json` plugin index and extends automatically the list of entry points (collected into `.egg-info/entry_points.txt`).
 The `plux.json` file becomes a part of the distribution, s.t., the plugins do not have to be discovered every time your distribution is installed elsewhere.
-
+Discovering at build time also works when using `python -m build`, since it calls registered setuptools scripts.
 
 
 Examples
