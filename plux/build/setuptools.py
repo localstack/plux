@@ -36,8 +36,17 @@ class plugins(InfoCommon, setuptools.Command):
         self.plux_json_path = get_plux_json_path(self.distribution)
 
     def run(self) -> None:
-        self.debug_print("finding plugins...")
-        ep = find_plugins(exclude=("tests", "tests.*"))  # TODO: options
+        if not self.distribution.package_dir:
+            where = "."
+        else:
+            if self.distribution.package_dir[""]:
+                where = self.distribution.package_dir[""]
+            else:
+                self.debug_print("plux doesn't know how to resolve multiple package_dir directories")
+                where = "."
+
+        self.debug_print(f"finding plugins in '{where}'...")
+        ep = find_plugins(where=where, exclude=("tests", "tests.*"))  # TODO: pass options through CLI
 
         self.debug_print(f"writing discovered plugins into {self.plux_json_path}")
         self.mkpath(os.path.dirname(self.plux_json_path))
