@@ -16,7 +16,7 @@ from plux.build.setuptools import (
 
 
 def entrypoints(args):
-    dist = get_distribution_from_workdir(args.workdir)
+    dist = get_distribution_from_workdir(os.getcwd())
 
     print("discovering plugins ...")
     dist.run_command("plugins")
