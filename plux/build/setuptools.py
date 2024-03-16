@@ -36,17 +36,8 @@ class plugins(InfoCommon, setuptools.Command):
         self.plux_json_path = get_plux_json_path(self.distribution)
 
     def run(self) -> None:
-        if not self.distribution.package_dir:
-            where = "."
-        else:
-            if self.distribution.package_dir[""]:
-                where = self.distribution.package_dir[""]
-            else:
-                self.debug_print("plux doesn't know how to resolve multiple package_dir directories")
-                where = "."
-
-        self.debug_print(f"finding plugins in '{where}'...")
-        ep = find_plugins(where=where, exclude=("tests", "tests.*"))  # TODO: pass options through CLI
+        plugin_finder = PluginFromPackageFinder(DistributionPackageFinder(self.distribution))
+        ep = discover_entry_points(plugin_finder)
 
         self.debug_print(f"writing discovered plugins into {self.plux_json_path}")
         self.mkpath(os.path.dirname(self.plux_json_path))
@@ -267,17 +258,70 @@ def _to_filename(name):
     return name.replace("-", "_")
 
 
-class PackagePathPluginFinder(PluginFinder):
+class _PackageFinder:
     """
-    Uses setuptools and pkgutil to find and import modules within a given path and then uses a
-    ModuleScanningPluginFinder to resolve the available plugins. The constructor has the same signature as
-    setuptools.find_packages(where, exclude, include).
+    Generate a list of Python packages. How these are generated depends on the implementation.
     """
 
-    def __init__(self, where=".", exclude=(), include=("*",)) -> None:
+    def find_packages(self) -> t.Iterable[str]:
+        raise NotImplementedError
+
+    @property
+    def path(self) -> str:
+        raise NotImplementedError
+
+
+class DistributionPackageFinder(_PackageFinder):
+    """
+    PackageFinder that returns the packages found in the distribution. The Distribution will already have a
+    list of resolved packages depending on the setup config. For example, if a ``pyproject.toml`` is used,
+    then the ``[tool.setuptools.package.find]`` config will be interpreted, resolved, and then
+    ``distribution.packages`` will contain the resolved packages. This already contains namespace packages
+    correctly if configured.
+    """
+
+    def __init__(self, distribution: Distribution):
+        self.distribution = distribution
+
+    def find_packages(self) -> t.Iterable[str]:
+        return self.distribution.packages
+
+    @property
+    def path(self) -> str:
+        if not self.distribution.package_dir:
+            where = "."
+        else:
+            if self.distribution.package_dir[""]:
+                where = self.distribution.package_dir[""]
+            else:
+                LOG.warning("plux doesn't know how to resolve multiple package_dir directories")
+                where = "."
+        return where
+
+
+class DefaultPackageFinder(_PackageFinder):
+    def __init__(self, where=".", exclude=(), include=("*",), namespace=True) -> None:
         self.where = where
         self.exclude = exclude
         self.include = include
+        self.namespace = namespace
+
+    def find_packages(self) -> t.Iterable[str]:
+        if self.namespace:
+            return setuptools.find_namespace_packages(self.where, self.exclude, self.include)
+        else:
+            return setuptools.find_packages(self.where, self.exclude, self.include)
+
+    @property
+    def path(self) -> str:
+        return self.where
+
+
+class PluginFromPackageFinder(PluginFinder):
+    finder: _PackageFinder
+
+    def __init__(self, finder: _PackageFinder):
+        self.finder = finder
 
     def find_plugins(self) -> t.List[PluginSpec]:
         collector = ModuleScanningPluginFinder(self.load_modules())
@@ -294,15 +338,24 @@ class PackagePathPluginFinder(PluginFinder):
         # adapted from https://stackoverflow.com/a/54323162/804840
         from pkgutil import iter_modules
 
-        from setuptools import find_packages
-
         modules = set()
 
-        for pkg in find_packages(self.where, self.exclude, self.include):
+        for pkg in self.finder.find_packages():
             modules.add(pkg)
-            pkgpath = self.where + os.sep + pkg.replace(".", os.sep)
+            pkgpath = self.finder.path + os.sep + pkg.replace(".", os.sep)
             for info in iter_modules([pkgpath]):
                 if not info.ispkg:
                     modules.add(pkg + "." + info.name)
 
         return modules
+
+
+class PackagePathPluginFinder(PluginFromPackageFinder):
+    """
+    Uses setuptools and pkgutil to find and import modules within a given path and then uses a
+    ModuleScanningPluginFinder to resolve the available plugins. The constructor has the same signature as
+    setuptools.find_packages(where, exclude, include).
+    """
+
+    def __init__(self, where=".", exclude=(), include=("*",), namespace=True) -> None:
+        super().__init__(DefaultPackageFinder(where, exclude, include, namespace=namespace))
