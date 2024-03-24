@@ -32,3 +32,17 @@ def plugin_3():
 @plugin(name="plugin_4", namespace="namespace_3")
 def functional_plugin():
     return "another"
+
+
+def load_condition():
+    return False
+
+
+@plugin(name="plugin_5", namespace="namespace_4", should_load=lambda: load_condition())
+def functional_plugin_with_load_condition_function():
+    return "not loading this one"
+
+
+@plugin(name="plugin_6", namespace="namespace_4", should_load=False)
+def functional_plugin_with_load_condition_bool():
+    return "not loading this one either"
