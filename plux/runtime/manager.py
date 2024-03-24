@@ -21,8 +21,9 @@ P = t.TypeVar("P", bound=Plugin)
 
 def _call_safe(func: t.Callable, args: t.Tuple, exception_message: str):
     """
-    Call the given function with the given arguments, and if it fails, log the given exception_message.
-    If logging.DEBUG is set for the logger, then we also log the traceback.
+    Call the given function with the given arguments, and if it fails, log the given exception_message. If
+    logging.DEBUG is set for the logger, then we also log the traceback. An exception is made for any
+    ``PluginException``, which should be handled by the caller.
 
     :param func: function to call
     :param args: arguments to pass
@@ -31,6 +32,8 @@ def _call_safe(func: t.Callable, args: t.Tuple, exception_message: str):
     """
     try:
         return func(*args)
+    except PluginException:
+        raise
     except Exception as e:
         if LOG.isEnabledFor(logging.DEBUG):
             LOG.exception(exception_message)
@@ -123,6 +126,9 @@ class PluginContainer(t.Generic[P]):
     init_error: Exception = None
     load_error: Exception = None
 
+    is_disabled: bool = False
+    disabled_reason = str = None
+
     @property
     def distribution(self) -> Distribution:
         """
@@ -192,8 +198,16 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
         """
         container = self._require_plugin(name)
 
+        if container.is_disabled:
+            raise PluginDisabled(container.plugin_spec.namespace, name, container.disabled_reason)
+
         if not container.is_loaded:
-            self._load_plugin(container)
+            try:
+                self._load_plugin(container)
+            except PluginDisabled as e:
+                container.is_disabled = True
+                container.disabled_reason = e.reason
+                raise
 
         if container.init_error:
             raise container.init_error
@@ -277,6 +291,8 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
                     container.plugin = self._plugin_from_spec(plugin_spec)
                     container.is_init = True
                     self._fire_on_init_after(plugin_spec, container.plugin)
+                except PluginDisabled:
+                    raise
                 except Exception as e:
                     # TODO: maybe we should move these logging blocks to `load_all`, since this is the only instance
                     #  where exceptions messages may get lost.
@@ -290,18 +306,24 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
             plugin = container.plugin
 
             if not plugin.should_load():
-                raise PluginDisabled(namespace=self.namespace, name=container.plugin_spec.name)
+                raise PluginDisabled(
+                    namespace=self.namespace,
+                    name=container.plugin_spec.name,
+                    reason="Load condition for plugin was false",
+                )
 
             args = self.load_args
             kwargs = self.load_kwargs
 
-            self._fire_on_load_before(plugin_spec, plugin, args, kwargs)
             try:
+                self._fire_on_load_before(plugin_spec, plugin, args, kwargs)
                 LOG.debug("loading plugin %s:%s", self.namespace, plugin_spec.name)
                 result = plugin.load(*args, **kwargs)
                 self._fire_on_load_after(plugin_spec, plugin, result)
                 container.load_value = result
                 container.is_loaded = True
+            except PluginDisabled:
+                raise
             except Exception as e:
                 if LOG.isEnabledFor(logging.DEBUG):
                     LOG.exception("error loading plugin %s", plugin_spec)

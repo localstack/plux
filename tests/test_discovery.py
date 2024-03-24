@@ -10,7 +10,7 @@ class TestModuleScanningPluginFinder:
         finder = ModuleScanningPluginFinder(modules=[sample_plugins])
 
         plugins = finder.find_plugins()
-        assert len(plugins) == 5
+        assert len(plugins) == 7
 
         plugins = [(spec.namespace, spec.name) for spec in plugins]
 
@@ -20,6 +20,8 @@ class TestModuleScanningPluginFinder:
         assert ("namespace_1", "plugin_2") in plugins
         assert ("namespace_3", "plugin_3") in plugins
         assert ("namespace_3", "plugin_4") in plugins
+        assert ("namespace_4", "plugin_5") in plugins
+        assert ("namespace_4", "plugin_6") in plugins
 
 
 class TestPackagePathPluginFinder:
@@ -29,7 +31,7 @@ class TestPackagePathPluginFinder:
         finder = PackagePathPluginFinder(where=where, include=("tests.plugins",))
 
         plugins = finder.find_plugins()
-        assert len(plugins) == 5
+        assert len(plugins) == 7
 
         plugins = [(spec.namespace, spec.name) for spec in plugins]
 
@@ -39,3 +41,5 @@ class TestPackagePathPluginFinder:
         assert ("namespace_1", "plugin_2") in plugins
         assert ("namespace_3", "plugin_3") in plugins
         assert ("namespace_3", "plugin_4") in plugins
+        assert ("namespace_4", "plugin_5") in plugins
+        assert ("namespace_4", "plugin_6") in plugins

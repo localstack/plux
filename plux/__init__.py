@@ -27,6 +27,7 @@ __all__ = [
     "PluginFactory",
     "PluginFinder",
     "PluginLifecycleListener",
+    "CompositePluginLifecycleListener",
     "PluginManager",
     "PluginContainer",
     "PluginSpec",
