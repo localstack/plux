@@ -212,6 +212,17 @@ def _get_egg_info_dir() -> t.Optional[str]:
         if d.endswith(".egg-info"):
             return os.path.join(cwd, d)
 
+    # if there's no egg-info dir in the current working dir, this project may be a src layout project,
+    # in which case we can find the egg info dir in the source folder.
+    distribution = get_distribution_from_workdir(cwd)
+    dirs = distribution.package_dir
+    egg_base = (dirs or {}).get("", os.curdir)
+    if not egg_base:
+        return None
+    egg_info_dir = _to_filename(_safe_name(distribution.get_name())) + ".egg-info"
+    candidate = os.path.join(cwd, egg_base, egg_info_dir)
+    if os.path.exists(candidate):
+        return candidate
     return None
 
 
