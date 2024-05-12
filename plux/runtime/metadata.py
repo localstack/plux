@@ -21,6 +21,7 @@ else:
         return dict(pkg_to_dist)
 
 
+from plux.core.entrypoint import EntryPointDict, to_entry_point_dict
 from plux.core.plugin import PluginSpec
 
 Distribution = metadata.Distribution
@@ -55,3 +56,11 @@ def resolve_distribution_information(plugin_spec: PluginSpec) -> t.Optional[Dist
         raise ValueError("cannot deal with plugins that are part of namespace packages")
 
     return metadata.distribution(distributions[0])
+
+
+def entry_points_from_metadata_path(metadata_path: str) -> EntryPointDict:
+    """
+    Reads the entry_points.txt from a distribution meta dir (e.g., the .egg-info or .dist-info directory).
+    """
+    dist = Distribution.at(metadata_path)
+    return to_entry_point_dict(dist.entry_points)
