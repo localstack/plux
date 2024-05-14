@@ -12,7 +12,7 @@ from plux.core.plugin import (
 )
 
 from .metadata import Distribution, resolve_distribution_information
-from .resolve import MetadataPluginFinder, StevedorePluginFinder
+from .resolve import MetadataPluginFinder
 
 LOG = logging.getLogger(__name__)
 
