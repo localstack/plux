@@ -120,7 +120,15 @@ class EntryPointsCache(EntryPointsResolver):
     def _calculate_hash_key(self, path: t.List[str]):
         """
         Calculates a hash of all modified times of all ``entry_point.txt`` files in the path. Basic idea
-        taken from stevedore.
+        taken from ``stevedore._cache._hash_settings_for_path``. The main difference to it is that it also
+        considers entry points files linked through ``entry_points_editable.txt``.
+
+        The hash considers:
+        * the path executable (python version)
+        * the path prefix (like a .venv path)
+        * mtime of each path entry
+        * mtimes of all entry_point.txt files within the path
+        * mtimes of all entry_point.txt files linked through entry_points_editable.txt files
 
         :param path: the path (typically ``sys.path``)
         :return: a sha256 hash that hashes the path's entry point state

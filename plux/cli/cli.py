@@ -9,7 +9,7 @@ import os
 import sys
 
 from plux.build.setuptools import (
-    _get_egg_info_dir,
+    find_egg_info_dir,
     find_plugins,
     get_distribution_from_workdir,
     get_plux_json_path,
@@ -38,7 +38,7 @@ def discover(args):
 
 
 def show(args):
-    egg_info_dir = _get_egg_info_dir()
+    egg_info_dir = find_egg_info_dir()
     if not egg_info_dir:
         print("no *.egg-info directory")
         return

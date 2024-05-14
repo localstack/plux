@@ -23,7 +23,7 @@ It provides tools to load plugins from entry points at run time, and to discover
   In the simplest case, that can just be the Plugin's class).
 * `Plugin`: an object that exposes a `should_load` and `load` method.
   Note that it does not function as a domain object (it does not hold the plugins lifecycle state, like initialized, loaded, etc..., or other metadata of the Plugin)
-* `PluginFinder`: finds plugins, either at build time (by scanning the modules using `pkgutil` and `setuptools`) or at run time (reading entrypoints of the distribution using [stevedore](https://docs.openstack.org/stevedore/latest/))
+* `PluginFinder`: finds plugins, either at build time (by scanning the modules using `pkgutil` and `setuptools`) or at run time (reading entrypoints of the distribution using [importlib](https://docs.python.org/3/library/importlib.metadata.html#entry-points))
 * `PluginManager`: manages the run time lifecycle of a Plugin, which has three states:
   * resolved: the entrypoint pointing to the PluginSpec was imported and the `PluginSpec` instance was created
   * init: the `PluginFactory` of the `PluginSpec` was successfully invoked
@@ -33,7 +33,7 @@ It provides tools to load plugins from entry points at run time, and to discover
 
 ### Loading Plugins
 
-At run time, a `PluginManager` uses a `PluginFinder` that in turn uses stevedore to scan the available entrypoints for things that look like a `PluginSpec`.
+At run time, a `PluginManager` uses a `PluginFinder` that in turn uses importlib to scan the available entrypoints for things that look like a `PluginSpec`.
 With `PluginManager.load(name: str)` or `PluginManager.load_all()`, plugins within the namespace that are discoverable in entrypoints can be loaded.
 If an error occurs at any state of the lifecycle, the `PluginManager` informs the `PluginLifecycleListener` about it, but continues operating.
 

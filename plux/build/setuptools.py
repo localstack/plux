@@ -98,7 +98,7 @@ def patch_editable_wheel_command():
 
         # create what is basically an application-layer symlink to the original entry points
         target = Path(self.dist_info_dir, "entry_points_editable.txt")
-        target.write_text(os.path.join(_get_egg_info_dir(), "entry_points.txt"))
+        target.write_text(os.path.join(find_egg_info_dir(), "entry_points.txt"))
 
     editable_wheel._ensure_dist_info = _ensure_dist_info
 
@@ -208,7 +208,7 @@ def entry_points_from_egg_info(egg_info_dir: str) -> EntryPointDict:
 
 
 def _has_entry_points_cache() -> bool:
-    egg_info_dir = _get_egg_info_dir()
+    egg_info_dir = find_egg_info_dir()
     if not egg_info_dir:
         return False
 
@@ -225,7 +225,7 @@ def _should_read_existing_egg_info() -> t.Tuple[bool, t.Optional[str]]:
     if not (_is_pip_build_context() or _is_local_build_context()):
         return False, None
 
-    egg_info_dir = _get_egg_info_dir()
+    egg_info_dir = find_egg_info_dir()
     if not egg_info_dir:
         return False, None
 
@@ -265,11 +265,11 @@ def _is_local_build_context():
     return False
 
 
-def _get_egg_info_dir(workdir=None) -> t.Optional[str]:
+def find_egg_info_dir() -> t.Optional[str]:
     """
     Heuristic to find the .egg-info dir of the current build context.
     """
-    workdir = workdir or os.getcwd()
+    workdir = os.getcwd()
     distribution = get_distribution_from_workdir(workdir)
     dirs = distribution.package_dir
     egg_base = (dirs or {}).get("", workdir)
