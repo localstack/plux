@@ -3,6 +3,7 @@ Module to provide easier high-level access to ``importlib.metadata`` in the cont
 """
 
 import collections
+import importlib.metadata
 import inspect
 import io
 import os
@@ -69,7 +70,9 @@ def entry_points_from_metadata_path(metadata_path: str) -> EntryPointDict:
     return to_entry_point_dict(dist.entry_points)
 
 
-def resolve_entry_points(distributions: t.Iterable[Distribution] = None) -> metadata.EntryPoints:
+def resolve_entry_points(
+    distributions: t.Iterable[Distribution] = None,
+) -> t.List[metadata.EntryPoint]:
     """
     Resolves all entry points using a combination of ``importlib.metadata``, and also follows entry points
     links in ``entry_points_editable.txt`` created by plux while building editable wheels.
@@ -86,7 +89,7 @@ def resolve_entry_points(distributions: t.Iterable[Distribution] = None) -> meta
 
         if entry_points_path and os.path.exists(entry_points_path):
             with open(entry_points_path, "r") as fd:
-                editable_eps = metadata.EntryPoints._from_text(fd.read())
+                editable_eps = parse_entry_points_text(fd.read())
                 entry_points.extend(editable_eps)
         else:
             entry_points.extend(dist.entry_points)
@@ -101,7 +104,7 @@ def resolve_entry_points(distributions: t.Iterable[Distribution] = None) -> meta
         seen.add(key)
         unique.append(ep)
 
-    return metadata.EntryPoints(unique)
+    return unique
 
 
 def build_entry_point_index(
@@ -124,14 +127,21 @@ def build_entry_point_index(
     return dict(result)
 
 
-def parse_entry_points_text(text: str) -> metadata.EntryPoints:
-    """
-    Parses the content of an ``entry_points.txt`` into a list of entry point objects.
+if sys.version_info >= (3, 10):
 
-    :param text: the string to parse
-    :return: a list of metadata EntryPoint objects
-    """
-    return metadata.EntryPoints._from_text(text)
+    def parse_entry_points_text(text: str) -> t.List[metadata.EntryPoint]:
+        """
+        Parses the content of an ``entry_points.txt`` into a list of entry point objects.
+
+        :param text: the string to parse
+        :return: a list of metadata EntryPoint objects
+        """
+        return metadata.EntryPoints._from_text(text)
+
+else:
+
+    def parse_entry_points_text(text: str) -> t.List[metadata.EntryPoint]:
+        return metadata.EntryPoint._from_text(text)
 
 
 def serialize_entry_points_text(index: t.Dict[str, t.List[metadata.EntryPoint]]) -> str:
@@ -164,7 +174,7 @@ class EntryPointsResolver:
     Interface for something that builds an entry point index.
     """
 
-    def get_entry_points(self) -> t.Dict[str, list[metadata.EntryPoint]]:
+    def get_entry_points(self) -> t.Dict[str, t.List[metadata.EntryPoint]]:
         raise NotImplementedError
 
 
@@ -173,5 +183,5 @@ class MetadataEntryPointsResolver(EntryPointsResolver):
     Implementation that uses regular ``importlib.metadata`` methods to resolve entry points.
     """
 
-    def get_entry_points(self) -> t.Dict[str, list[metadata.EntryPoint]]:
+    def get_entry_points(self) -> t.Dict[str, t.List[metadata.EntryPoint]]:
         return build_entry_point_index(resolve_entry_points(metadata.distributions()))

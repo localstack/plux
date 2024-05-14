@@ -15,6 +15,7 @@ clean:
 	rm -rf build/
 	rm -rf .eggs/
 	rm -rf *.egg-info/
+	rm -rf .venv
 
 clean-dist: clean
 	rm -rf dist/

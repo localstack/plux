@@ -11,7 +11,19 @@ import typing as t
 from pathlib import Path
 
 import setuptools
-from setuptools.command.editable_wheel import editable_wheel
+
+try:
+    from setuptools.command.editable_wheel import editable_wheel
+except ImportError:
+    # this means we're probably working on an old setuptools version, perhaps because we are on an older
+    # Python version.
+    class editable_wheel:
+        def run(self):
+            raise NotImplementedError("Compatibility with editable wheels requires Python 3.10")
+
+        def _ensure_dist_info(self, *args, **kwargs):
+            pass
+
 from setuptools.command.egg_info import InfoCommon, write_entries
 
 from plux.core.entrypoint import EntryPointDict, discover_entry_points
@@ -142,7 +154,7 @@ def update_entrypoints(distribution, ep: EntryPointDict):
 
 
 def load_entry_points(
-        where=".", exclude=(), include=("*",), merge: EntryPointDict = None
+    where=".", exclude=(), include=("*",), merge: EntryPointDict = None
 ) -> EntryPointDict:
     """
     Finds plugins and builds and entry point map. This is to be used in a setup.py in the setup call:

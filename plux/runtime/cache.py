@@ -67,7 +67,7 @@ class EntryPointsCache(EntryPointsResolver):
     _instance: "EntryPointsCache" = None
     _instance_lock: threading.RLock = threading.RLock()
 
-    _cache: t.Dict[t.Tuple[str, ...], t.Dict[str, list[metadata.EntryPoint]]]
+    _cache: t.Dict[t.Tuple[str, ...], t.Dict[str, t.List[metadata.EntryPoint]]]
     """For each specific path (like sys.path), we store a dict of group -> [entry point]."""
 
     def __init__(self):
@@ -76,7 +76,7 @@ class EntryPointsCache(EntryPointsResolver):
         self._resolver = MetadataEntryPointsResolver()
         self._cache_dir = get_user_cache_dir() / "plux"
 
-    def get_entry_points(self) -> t.Dict[str, list[metadata.EntryPoint]]:
+    def get_entry_points(self) -> t.Dict[str, t.List[metadata.EntryPoint]]:
         """
         Returns a dictionary of entry points for the current ``sys.path``.
         """
