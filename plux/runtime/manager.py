@@ -12,7 +12,7 @@ from plux.core.plugin import (
 )
 
 from .metadata import Distribution, resolve_distribution_information
-from .resolve import StevedorePluginFinder
+from .resolve import MetadataPluginFinder
 
 LOG = logging.getLogger(__name__)
 
@@ -142,7 +142,7 @@ class PluginContainer(t.Generic[P]):
 class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
     """
     Manages Plugins within a namespace discovered by a PluginFinder. The default mechanism is to resolve plugins from
-    entry points using a StevedorePluginFinder.
+    entry points using a ImportlibPluginFinder.
 
     A Plugin that is managed by a PluginManager can be in three states:
         * resolved: the entrypoint pointing to the PluginSpec was imported and the PluginSpec instance was created
@@ -179,7 +179,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
         else:
             self.listeners = []
 
-        self.finder = finder or StevedorePluginFinder(
+        self.finder = finder or MetadataPluginFinder(
             self.namespace, self._fire_on_resolve_exception
         )
 

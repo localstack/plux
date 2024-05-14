@@ -6,9 +6,10 @@ import argparse
 import json
 import logging
 import os
+import sys
 
 from plux.build.setuptools import (
-    _get_egg_info_dir,
+    find_egg_info_dir,
     find_plugins,
     get_distribution_from_workdir,
     get_plux_json_path,
@@ -37,7 +38,7 @@ def discover(args):
 
 
 def show(args):
-    egg_info_dir = _get_egg_info_dir()
+    egg_info_dir = find_egg_info_dir()
     if not egg_info_dir:
         print("no *.egg-info directory")
         return
@@ -49,6 +50,17 @@ def show(args):
 
     with open(txt) as fd:
         print(fd.read())
+
+
+def resolve(args):
+    for p in sys.path:
+        print(f"path = {p}")
+    from plux import PluginManager
+
+    manager = PluginManager(namespace=args.namespace)
+
+    for spec in manager.list_plugin_specs():
+        print(f"{spec.namespace}:{spec.name} = {spec.factory.__module__}:{spec.factory.__name__}")
 
 
 def _pprint_plux_json(plux_json):
@@ -75,6 +87,13 @@ def main(argv=None):
     # Subparser for the 'discover' subcommand
     discover_parser = subparsers.add_parser("discover", help="Discover plugins and print them")
     discover_parser.set_defaults(func=discover)
+
+    # Subparser for the 'resolve' subcommand
+    resolve_parser = subparsers.add_parser(
+        "resolve", help="Resolve a plugin namespace and list all its plugins"
+    )
+    resolve_parser.add_argument("--namespace", help="the plugin namespace", required=True)
+    resolve_parser.set_defaults(func=resolve)
 
     # Subparser for the 'discover' subcommand
     show_parser = subparsers.add_parser("show", help="Show entrypoints that were generated")
