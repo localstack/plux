@@ -1,5 +1,5 @@
-"""Tools to resolve PluginSpec instances from entry points at runtime. Currently, stevedore does most of the heavy
-lifting for us here (it caches entrypoints and can load them quickly)."""
+"""Tools to resolve PluginSpec instances from entry points at runtime. The primary mechanism we use to do
+that is ``importlib.metadata`` and a bit of caching."""
 
 import logging
 import typing as t
@@ -15,7 +15,7 @@ LOG = logging.getLogger(__name__)
 
 class MetadataPluginFinder(PluginFinder):
     """
-    This is a simple implementation of a PluginFinder that uses ``importlib.metadata`` directly, without caching, to resolve plugins. It also automatically follows `entry_point
+    This is a simple implementation of a PluginFinder that uses by default the ``EntryPointsCache`` singleton.
     """
 
     def __init__(
@@ -33,7 +33,7 @@ class MetadataPluginFinder(PluginFinder):
 
     def find_plugins(self) -> t.List[PluginSpec]:
         specs = []
-        finds = self.entry_points_resolver.get_entry_points().get(self.namespace)
+        finds = self.entry_points_resolver.get_entry_points().get(self.namespace, [])
         for ep in finds:
             specs.append(self.to_plugin_spec(ep))
         return specs
