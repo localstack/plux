@@ -1,12 +1,14 @@
 """Tools to resolve PluginSpec instances from entry points at runtime. Currently, stevedore does most of the heavy
 lifting for us here (it caches entrypoints and can load them quickly)."""
+
 import logging
-import os.path
-import time
 import typing as t
-from importlib.metadata import EntryPoint, EntryPoints, distributions
+from importlib.metadata import EntryPoint
 
 from plux.core.plugin import PluginFinder, PluginSpec, PluginSpecResolver
+
+from .cache import EntryPointsCache
+from .metadata import EntryPointsResolver
 
 LOG = logging.getLogger(__name__)
 
@@ -21,52 +23,17 @@ class MetadataPluginFinder(PluginFinder):
         namespace: str,
         on_resolve_exception_callback: t.Callable[[str, t.Any, Exception], None] = None,
         spec_resolver: PluginSpecResolver = None,
+        entry_points_resolver: EntryPointsResolver = None,
     ) -> None:
         super().__init__()
         self.namespace = namespace
         self.on_resolve_exception_callback = on_resolve_exception_callback
         self.spec_resolver = spec_resolver or PluginSpecResolver()
-
-    def unique_entry_points(self, group: str) -> t.List[EntryPoint]:
-        """
-        Resolves the entrypoints using importlib.metadata, and also adds entry points from
-        ``entry_points_editable.txt`` created by plux on editable installs.
-
-        :param group: the entrypoint group to filter by
-        :return: a list of entry points
-        """
-        eps = []
-
-        for dist in distributions():
-            # this is a distribution that was installed as editable, therefore we follow the link created by plux
-            entry_points_path = dist.read_text("entry_points_editable.txt")
-
-            if entry_points_path and os.path.exists(entry_points_path):
-                with open(entry_points_path, "r") as fd:
-                    editable_eps = EntryPoints._from_text(fd.read())
-                    eps.extend(editable_eps)
-            else:
-                eps.extend(dist.entry_points)
-
-        unique = []
-        seen = set()
-
-        for ep in eps:
-            if ep.group != group:
-                continue
-            key = f"{ep.name}={ep.value}"
-            if key in seen:
-                continue
-            seen.add(key)
-            unique.append(ep)
-
-        return unique
+        self.entry_points_resolver = entry_points_resolver or EntryPointsCache.instance()
 
     def find_plugins(self) -> t.List[PluginSpec]:
         specs = []
-        then = time.time()
-        finds = self.unique_entry_points(self.namespace)
-        print(f"took {time.time() - then:.4f}s to resolve {len(finds)} plugins")
+        finds = self.entry_points_resolver.get_entry_points().get(self.namespace)
         for ep in finds:
             specs.append(self.to_plugin_spec(ep))
         return specs
