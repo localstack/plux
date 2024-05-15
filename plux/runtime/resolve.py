@@ -35,7 +35,9 @@ class MetadataPluginFinder(PluginFinder):
         specs = []
         finds = self.entry_points_resolver.get_entry_points().get(self.namespace, [])
         for ep in finds:
-            specs.append(self.to_plugin_spec(ep))
+            spec = self.to_plugin_spec(ep)
+            if spec:
+                specs.append(spec)
         return specs
 
     def to_plugin_spec(self, entry_point: EntryPoint) -> PluginSpec:
@@ -51,4 +53,5 @@ class MetadataPluginFinder(PluginFinder):
                     "error resolving PluginSpec for plugin %s.%s", self.namespace, entry_point.name
                 )
 
-            self.on_resolve_exception_callback(self.namespace, entry_point, e)
+            if self.on_resolve_exception_callback:
+                self.on_resolve_exception_callback(self.namespace, entry_point, e)
