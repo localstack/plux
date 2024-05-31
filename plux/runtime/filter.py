@@ -47,7 +47,7 @@ class PluginSpecMatcher:
 
 
 class MatchingPluginFilter:
-    matchers: list[PluginSpecMatcher]
+    matchers: t.List[PluginSpecMatcher]
 
     def __init__(self):
         self.matchers = []
