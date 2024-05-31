@@ -11,6 +11,7 @@ from plux.core.plugin import (
     PluginSpec,
 )
 
+from .filter import PluginFilter, global_plugin_filter
 from .metadata import Distribution, resolve_distribution_information
 from .resolve import MetadataPluginFinder
 
@@ -157,6 +158,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
     load_args: t.Union[t.List, t.Tuple]
     load_kwargs: t.Dict[str, t.Any]
     listeners: t.List[PluginLifecycleListener]
+    filters: t.List[PluginFilter]
 
     def __init__(
         self,
@@ -165,6 +167,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
         load_kwargs: t.Dict = None,
         listener: t.Union[PluginLifecycleListener, t.Iterable[PluginLifecycleListener]] = None,
         finder: PluginFinder = None,
+        filters: t.List[PluginFilter] = None,
     ):
         self.namespace = namespace
 
@@ -178,6 +181,9 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
                 self.listeners = [listener]
         else:
             self.listeners = []
+
+        if not filters:
+            self.filters = [global_plugin_filter]
 
         self.finder = finder or MetadataPluginFinder(
             self.namespace, self._fire_on_resolve_exception
@@ -283,6 +289,15 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
     def _load_plugin(self, container: PluginContainer):
         with container.lock:
             plugin_spec = container.plugin_spec
+
+            if self.filters:
+                for filter_ in self.filters:
+                    if filter_(plugin_spec):
+                        raise PluginDisabled(
+                            namespace=self.namespace,
+                            name=container.plugin_spec.name,
+                            reason="A plugin filter disabled this plugin before it was initialized",
+                        )
 
             # instantiate Plugin from spec if necessary
             if not container.is_init:
