@@ -199,40 +199,40 @@ class TestGlobalPluginFilter:
     def test_disable_namespace(self, dummy_plugin_finder):
         manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
 
-        global_plugin_filter.add_pattern("test.plugins.*")
+        global_plugin_filter.add_exclusion(namespace="test.plugins.*")
 
         manager.load_all()
         assert manager.is_loaded("shouldload") is False
         assert manager.is_loaded("shouldalsoload") is False
 
-        global_plugin_filter.matchers.clear()
+        global_plugin_filter.exclusions.clear()
 
     def test_non_matching_namespace(self, dummy_plugin_finder):
         manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
 
-        global_plugin_filter.add_pattern("test.plugins.dummy.*")
+        global_plugin_filter.add_exclusion(namespace="test.plugins.dummy.*")
 
         manager.load_all()
         assert manager.is_loaded("shouldload") is True
         assert manager.is_loaded("shouldalsoload") is True
-        global_plugin_filter.matchers.clear()
+        global_plugin_filter.exclusions.clear()
 
     def test_disable_name(self, dummy_plugin_finder):
         manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
 
-        global_plugin_filter.add_pattern(name="*also*")
+        global_plugin_filter.add_exclusion(name="*also*")
 
         manager.load_all()
         assert manager.is_loaded("shouldload") is True
         assert manager.is_loaded("shouldalsoload") is False
-        global_plugin_filter.matchers.clear()
+        global_plugin_filter.exclusions.clear()
 
     def test_disable_value(self, dummy_plugin_finder):
         manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
 
-        global_plugin_filter.add_pattern(value="tests.test_manager:*")
+        global_plugin_filter.add_exclusion(value="tests.test_manager:*")
 
         manager.load_all()
         assert manager.is_loaded("shouldload") is False
         assert manager.is_loaded("shouldalsoload") is False
-        global_plugin_filter.matchers.clear()
+        global_plugin_filter.exclusions.clear()

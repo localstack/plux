@@ -169,6 +169,18 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
         finder: PluginFinder = None,
         filters: t.List[PluginFilter] = None,
     ):
+        """
+        Create a new PluginManager.
+
+        :param namespace: the namespace (entry point group) that will be managed
+        :param load_args: positional arguments passed to ``Plugin.load()``
+        :param load_kwargs: keyword arguments passed to ``Plugin.load()``
+        :param listener: plugin lifecycle listeners, can either be a single listener or a list
+        :param finder: the plugin finder to be used, by default it uses a ``MetadataPluginFinder`
+        :param filters: filters exclude specific plugins. when no filters are provided, a list is created
+            and ``global_plugin_filter`` is added to it. filters can later be modified via
+            ``plugin_manager.filters``.
+        """
         self.namespace = namespace
 
         self.load_args = load_args or list()
