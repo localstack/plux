@@ -28,7 +28,7 @@ class ModuleScanningPluginFinder(PluginFinder):
         plugins = list()
 
         for module in self.modules:
-            LOG.debug("scanning module %s", module.__name__)
+            LOG.debug("scanning module %s, file=%s", module.__name__, module.__file__)
             members = inspect.getmembers(module)
 
             for member in members:
