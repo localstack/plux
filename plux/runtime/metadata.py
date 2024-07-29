@@ -3,7 +3,6 @@ Module to provide easier high-level access to ``importlib.metadata`` in the cont
 """
 
 import collections
-import importlib.metadata
 import inspect
 import io
 import os
@@ -34,12 +33,24 @@ Distribution = metadata.Distribution
 @lru_cache()
 def packages_distributions() -> t.Mapping[str, t.List[str]]:
     """
-    Cache wrapper around metadata.packages_distributions, which returns a mapping of top-level packages to
-    their distributions.
+    Cache wrapper around ``metadata.packages_distributions``, which returns a mapping of top-level packages to
+    their distributions. This index is created by scanning all ``top_level.txt`` metadata files in the path.
+
+    Unlike ``metadata.packages_distributions``, this implementation will contain a de-duplicated list of
+    distribution names per package. With editable installs, ``packages_distributions()`` may return the
+    distribution metadata for both the ``.egg-info`` in the linked source directory, and the ``.dist-info``
+    in the site-packages directory created by the editable install. Therefore, a distribution name may
+    appear twice for the same package, which is unhelpful information, so we deduplicate it here.
 
     :return: package to distribution mapping
     """
-    return metadata_packages_distributions()
+    distributions = dict(metadata_packages_distributions())
+
+    for k in distributions.keys():
+        # remove duplicates occurrences of the same distribution name
+        distributions[k] = list(set(distributions[k]))
+
+    return distributions
 
 
 def resolve_distribution_information(plugin_spec: PluginSpec) -> t.Optional[Distribution]:
