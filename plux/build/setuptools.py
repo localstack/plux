@@ -1,6 +1,7 @@
 """
 Bindings to integrate plux into setuptools build processes.
 """
+
 import importlib
 import json
 import logging
@@ -11,6 +12,7 @@ import typing as t
 from pathlib import Path
 
 import setuptools
+from setuptools.command.bdist_wheel import bdist_wheel
 
 try:
     from setuptools.command.editable_wheel import editable_wheel
@@ -24,11 +26,12 @@ except ImportError:
         def _ensure_dist_info(self, *args, **kwargs):
             pass
 
-from setuptools.command.egg_info import InfoCommon, write_entries
 
 from plux.core.entrypoint import EntryPointDict, discover_entry_points
 from plux.core.plugin import PluginFinder, PluginSpec
 from plux.runtime.metadata import Distribution, entry_points_from_metadata_path
+from setuptools.command.egg_info import InfoCommon, write_entries
+
 from .discovery import ModuleScanningPluginFinder
 
 LOG = logging.getLogger(__name__)
@@ -59,6 +62,23 @@ class plugins(InfoCommon, setuptools.Command):
             json.dump(ep, fd)
 
         update_entrypoints(self.distribution, ep)
+
+
+def patch_bdist_wheel_command():
+    # BURN IT WITH FIRE!
+    # https://github.com/pypa/setuptools/commit/bc82d73b12b8260b9b2a3736cf7f3c603e379e93
+    LOG.debug("pluxdebug-patch_bdist_wheel_command")
+    finalize_options_orig = bdist_wheel.finalize_options
+
+    def finalize_options(self) -> None:
+        LOG.debug("Resetting dist_info_dir, currently %s", self.dist_info_dir)
+        self.dist_info_dir = None
+        finalize_options_orig(self)
+
+    bdist_wheel.finalize_options = finalize_options
+
+
+patch_bdist_wheel_command()
 
 
 def patch_editable_wheel_command():
