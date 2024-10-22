@@ -6,11 +6,13 @@ import json
 import logging
 import os
 import re
+import shutil
 import sys
 import typing as t
 from pathlib import Path
 
 import setuptools
+from setuptools.command.egg_info import egg_info
 
 try:
     from setuptools.command.editable_wheel import editable_wheel
@@ -105,6 +107,46 @@ def patch_editable_wheel_command():
 
 # patch will be applied implicitly through the entry point that loads the ``plugins`` command.
 patch_editable_wheel_command()
+
+
+def patch_egg_info_command():
+    """
+    This patch fixes the build process when pip builds a wheel from a source distribution. A source distribution built
+    with plux will already contain an `.egg_info` directory, however during the build with pip, a new .egg-info
+    directory is created from scratch from the python distribution configuration files (like setup.cfg or
+    pyproject.toml). This is a problem, as building a wheel involves creating a .dist-info dir, which is populated from
+    this new .egg-info directory. The .egg-info shipped with the source distribution is completely ignored during this
+    process, including the `plux.json`, leading to a wheel that does not correctly contain the `entry_points.txt`.
+
+    This patch hooks into this procedure, and makes sure when this new .egg-info directory is created, we first locate
+    the one shipped with the source distribution, locate the `plux.json` file, and copy it into the new build context.
+    """
+    _run_orig = egg_info.run
+
+    def _run(self):
+        LOG.debug("Running egg_info command patch from plux")
+        # the working directory may be something like `/tmp/pip-req-build-bwekzpi_` where the source distribution
+        # was copied into. this happens when you `pip install <dist>` where <dist> is
+        # some source distribution.
+        should_read, meta_dir = _should_read_existing_egg_info()
+
+        # if the .egg_info from the source distribution contains the plux file, we prepare the new .egg-info by copying
+        # it there. everything else should be handled implicitly by the command
+        if should_read:
+            LOG.debug("Locating plux.json from local build context %s", meta_dir)
+            plux_json = os.path.join(meta_dir, "plux.json")
+            if os.path.exists(plux_json):
+                self.mkpath(self.egg_info)  # this is what egg_info.run() does but it's idempotent
+                if not os.path.exists(os.path.join(self.egg_info, "plux.json")):
+                    LOG.debug("copying %s into temporary %s", plux_json, self.egg_info)
+                    shutil.copy(plux_json, self.egg_info)
+
+        return _run_orig(self)
+
+    egg_info.run = _run
+
+
+patch_egg_info_command()
 
 
 def find_plugins(where=".", exclude=(), include=("*",)) -> EntryPointDict:
@@ -252,7 +294,11 @@ def _is_local_build_context():
         try:
             i = sys.argv.index("--egg-base")
         except ValueError:
-            return False
+            try:
+                # this code path is for building wheels from source distributions via pip
+                i = sys.argv.index("--output-dir")
+            except ValueError:
+                return False
 
         if "pip-modern-metadata" in sys.argv[i + 1]:
             return True
