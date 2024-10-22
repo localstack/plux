@@ -136,7 +136,7 @@ def patch_egg_info_command():
             LOG.debug("Locating plux.json from local build context %s", meta_dir)
             plux_json = os.path.join(meta_dir, "plux.json")
             if os.path.exists(plux_json):
-                self.mkpath(self.egg_info)  # this is what egg_info.run()
+                self.mkpath(self.egg_info)  # this is what egg_info.run() does but it's idempotent
                 if not os.path.exists(os.path.join(self.egg_info, "plux.json")):
                     LOG.debug("copying %s into temporary %s", plux_json, self.egg_info)
                     shutil.copy(plux_json, self.egg_info)
