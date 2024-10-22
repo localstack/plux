@@ -17,7 +17,7 @@ from plux.runtime.manager import PluginContainer, PluginManager
 
 name = "plux"
 
-__version__ = "1.11.2"
+__version__ = "1.12.0"
 
 __all__ = [
     "FunctionPlugin",
