@@ -1,5 +1,6 @@
 import os.path
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -26,3 +27,9 @@ def test_entrypoints(project_name):
     with open(os.path.join(project, "test_project.egg-info", "entry_points.txt"), "r") as f:
         lines = [line.strip() for line in f.readlines() if line.strip()]
         assert lines == ["[plux.test.plugins]", "myplugin = mysrc.plugins:MyPlugin"]
+
+    # make sure that SOURCES.txt contain no absolute paths
+    with open(os.path.join(project, "test_project.egg-info", "SOURCES.txt"), "r") as f:
+        lines = [line.strip() for line in f.readlines() if line.strip()]
+        for line in lines:
+            assert not line.startswith("/")
