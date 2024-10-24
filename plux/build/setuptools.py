@@ -345,12 +345,16 @@ def get_distribution_from_workdir(workdir: str) -> setuptools.Distribution:
 
     dist = setuptools.Distribution()
     dist.parse_config_files(config_files)
-    if os.path.exists("setup.py"):
+    if os.path.exists(os.path.join(workdir, "setup.py")):
         # use setup.py script if available
         dist.script_name = os.path.join(workdir, "setup.py")
     else:
-        # else use a bogus file (seems to work regardless)
+        # else use a config file (seems to work regardless)
         dist.script_name = config_files[0]
+
+    # note: the property Distribution.script_name is added to `SOURCES.txt` during the `sdist` command. the path
+    # must be a relative path. see https://github.com/localstack/plux/issues/23
+    dist.script_name = os.path.relpath(dist.script_name, workdir)
 
     return dist
 
