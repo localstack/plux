@@ -205,10 +205,13 @@ def get_plux_json_path(distribution):
 
 
 def read_configuration(distribution) -> dict:
-    if not find_spec("tomllib"):
+    if find_spec("tomllib"):
+        from tomllib import load as load_toml
+    elif find_spec("tomli"):
+        from tomli import load as load_toml
+    else:
         return {}
 
-    import tomllib
     dirs = distribution.package_dir
     pyproject_base = (dirs or {}).get("", os.curdir)
     pyproject_file = os.path.join(pyproject_base, "pyproject.toml")
@@ -216,7 +219,7 @@ def read_configuration(distribution) -> dict:
         return {}
 
     with open(pyproject_file, "rb") as file:
-        pyproject_config = tomllib.load(file)
+        pyproject_config = load_toml(file)
 
     tool_table = pyproject_config.get("tool", {})
     return tool_table.get("plux", {})
