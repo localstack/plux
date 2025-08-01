@@ -8,9 +8,9 @@ import os
 import re
 import shutil
 import sys
-import tomllib
 import typing as t
 from fnmatch import fnmatchcase
+from importlib.util import find_spec
 from pathlib import Path
 
 import setuptools
@@ -205,6 +205,10 @@ def get_plux_json_path(distribution):
 
 
 def read_configuration(distribution) -> dict:
+    if not find_spec("tomllib"):
+        return {}
+
+    import tomllib
     dirs = distribution.package_dir
     pyproject_base = (dirs or {}).get("", os.curdir)
     pyproject_file = os.path.join(pyproject_base, "pyproject.toml")
