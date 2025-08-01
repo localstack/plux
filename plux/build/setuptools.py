@@ -41,7 +41,7 @@ LOG = logging.getLogger(__name__)
 class plugins(InfoCommon, setuptools.Command):
     description = "Discover plux plugins and store them in .egg_info"
 
-    user_options: t.ClassVar[list[tuple[str, str, str]]] = [
+    user_options: t.ClassVar[t.List[t.Tuple[str, str, str]]] = [
         ('exclude=', 'e', "exclude those files when discovering plugins"),
         # TODO: add more
     ]
