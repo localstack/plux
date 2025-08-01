@@ -8,7 +8,9 @@ import os
 import re
 import shutil
 import sys
+import tomllib
 import typing as t
+from fnmatch import fnmatchcase
 from pathlib import Path
 
 import setuptools
@@ -39,20 +41,31 @@ LOG = logging.getLogger(__name__)
 class plugins(InfoCommon, setuptools.Command):
     description = "Discover plux plugins and store them in .egg_info"
 
-    user_options = [
-        # TODO
+    user_options: t.ClassVar[list[tuple[str, str, str]]] = [
+        ('exclude=', 'e', "exclude those files when discovering plugins"),
+        # TODO: add more
     ]
 
     egg_info: str
 
     def initialize_options(self) -> None:
         self.plux_json_path = None
+        self.exclude = None
 
     def finalize_options(self) -> None:
         self.plux_json_path = get_plux_json_path(self.distribution)
+        self.ensure_string_list('exclude')
+        if self.exclude is None:
+            self.exclude = []
+
+        project_config = read_configuration(self.distribution)
+        file_exclude = project_config.get("exclude")
+        if file_exclude:
+            self.exclude = set(self.exclude) | set(file_exclude)
+        self.exclude = [_path_to_module(item) for item in self.exclude]
 
     def run(self) -> None:
-        plugin_finder = PluginFromPackageFinder(DistributionPackageFinder(self.distribution))
+        plugin_finder = PluginFromPackageFinder(DistributionPackageFinder(self.distribution, exclude=self.exclude))
         ep = discover_entry_points(plugin_finder)
 
         self.debug_print(f"writing discovered plugins into {self.plux_json_path}")
@@ -189,6 +202,20 @@ def get_plux_json_path(distribution):
     egg_info_dir = _to_filename(_safe_name(distribution.get_name())) + ".egg-info"
     egg_info_dir = os.path.join(egg_base, egg_info_dir)
     return os.path.join(egg_info_dir, "plux.json")
+
+
+def read_configuration(distribution) -> dict:
+    dirs = distribution.package_dir
+    pyproject_base = (dirs or {}).get("", os.curdir)
+    pyproject_file = os.path.join(pyproject_base, "pyproject.toml")
+    if not os.path.exists(pyproject_file):
+        return {}
+
+    with open(pyproject_file, "rb") as file:
+        pyproject_config = tomllib.load(file)
+
+    tool_table = pyproject_config.get("tool", {})
+    return tool_table.get("plux", {})
 
 
 def update_entrypoints(distribution, ep: EntryPointDict):
@@ -375,6 +402,27 @@ def _to_filename(name):
     return name.replace("-", "_")
 
 
+def _path_to_module(path):
+    """
+    Convert a path to a Python module to its module representation
+    Example: plux/core/test -> plux.core.test
+    """
+    return path.strip("/").replace("/", ".")
+
+
+class _Filter:
+    """
+    Given a list of patterns, create a callable that will be true only if
+    the input matches at least one of the patterns.
+    This is from `setuptools.discovery._Filter`
+    """
+    def __init__(self, patterns: t.Iterable[str]):
+        self._patterns = patterns
+
+    def __call__(self, item: str):
+        return any(fnmatchcase(item, pat) for pat in self._patterns)
+
+
 class _PackageFinder:
     """
     Generate a list of Python packages. How these are generated depends on the implementation.
@@ -397,11 +445,12 @@ class DistributionPackageFinder(_PackageFinder):
     correctly if configured.
     """
 
-    def __init__(self, distribution: Distribution):
+    def __init__(self, distribution: Distribution, exclude: t.Optional[t.Iterable[str]] = None):
         self.distribution = distribution
+        self.exclude = _Filter(exclude or [])
 
     def find_packages(self) -> t.Iterable[str]:
-        return self.distribution.packages
+        return self.filter_packages(self.distribution.packages)
 
     @property
     def path(self) -> str:
@@ -414,6 +463,9 @@ class DistributionPackageFinder(_PackageFinder):
                 LOG.warning("plux doesn't know how to resolve multiple package_dir directories")
                 where = "."
         return where
+
+    def filter_packages(self, packages: t.Iterable[str]) -> t.Iterable[str]:
+        return [item for item in packages if not self.exclude(item)]
 
 
 class DefaultPackageFinder(_PackageFinder):
