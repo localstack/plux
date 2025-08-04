@@ -83,7 +83,11 @@ def main(argv=None):
     generate_parser = subparsers.add_parser(
         "entrypoints", help="Discover plugins and generate entry points"
     )
-    generate_parser.add_argument("-e", "--exclude", help="a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).")
+    generate_parser.add_argument(
+        "-e",
+        "--exclude",
+        help="a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).",
+    )
     generate_parser.set_defaults(func=entrypoints)
 
     # Subparser for the 'discover' subcommand

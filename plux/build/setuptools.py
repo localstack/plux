@@ -58,7 +58,9 @@ class plugins(InfoCommon, setuptools.Command):
         if self.exclude is None:
             self.exclude = []
 
-        project_config = read_configuration(self.distribution)
+        # we merge the configuration from the CLI arguments with the configuration read from the `pyproject.toml`
+        # [tool.plux] section
+        project_config = read_plux_configuration(self.distribution)
         file_exclude = project_config.get("exclude")
         if file_exclude:
             self.exclude = set(self.exclude) | set(file_exclude)
@@ -204,12 +206,19 @@ def get_plux_json_path(distribution):
     return os.path.join(egg_info_dir, "plux.json")
 
 
-def read_configuration(distribution) -> dict:
+def read_plux_configuration(distribution) -> dict:
+    """
+    Try reading the [tool.plux] section of the `pyproject.toml` TOML file of the Distribution, and returns it as a
+    dictionary.
+    """
     if find_spec("tomllib"):
+        # the tomllib library is part of the standard library since 3.11
         from tomllib import load as load_toml
     elif find_spec("tomli"):
+        # setuptools vendors the tomli library in 3.10
         from tomli import load as load_toml
     else:
+        # if we cannot find a TOML lib, we do not return any configuration
         return {}
 
     dirs = distribution.package_dir
@@ -257,8 +266,8 @@ def load_entry_points(
     instead, acting as sort of a cache.
 
     :param where: the file path to look for plugins (default, the current working dir)
-    :param exclude: the glob patterns to exclude
-    :param include: the glob patterns to include
+    :param exclude: the shell style wildcard patterns to exclude
+    :param include: the shell style wildcard patterns to include
     :param merge: a map of entry points that are always added
     """
     should_read, meta_dir = _should_read_existing_egg_info()
@@ -414,7 +423,7 @@ def _path_to_module(path):
     Convert a path to a Python module to its module representation
     Example: plux/core/test -> plux.core.test
     """
-    return '.'.join(Path(path).with_suffix('').parts)
+    return ".".join(Path(path).with_suffix("").parts)
 
 
 class _Filter:
@@ -450,6 +459,9 @@ class DistributionPackageFinder(_PackageFinder):
     then the ``[tool.setuptools.package.find]`` config will be interpreted, resolved, and then
     ``distribution.packages`` will contain the resolved packages. This already contains namespace packages
     correctly if configured.
+    You can additionally pass a sequence of values to the `exclude` parameters to provide a list of Unix shell style
+    patterns that will be matched against the Python packages to exclude them from the resolved packages.
+    Wildcards are allowed in the patterns with '*'. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself)
     """
 
     def __init__(self, distribution: Distribution, exclude: t.Optional[t.Iterable[str]] = None):

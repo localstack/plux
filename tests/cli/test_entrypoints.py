@@ -52,7 +52,7 @@ def test_entrypoints_exclude(project_name):
     sys.path.append(project)
     try:
         try:
-            main(["--workdir", project, "entrypoints", "--exclude", "**/subpkg*"])
+            main(["--workdir", project, "entrypoints", "--exclude", "*/subpkg*"])
         except SystemExit:
             pass
     finally:
@@ -86,7 +86,7 @@ def test_entrypoints_exclude_from_pyproject_config(tmp_path):
     pyproject_toml_path = os.path.join(dest_project, "pyproject.toml")
 
     with open(pyproject_toml_path, "a") as fp:
-        fp.write('\n[tool.plux]\nexclude = ["**subpkg*"]\n')
+        fp.write('\n[tool.plux]\nexclude = ["*.subpkg.*"]\n')
 
     os.chdir(dest_project)
 
