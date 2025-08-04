@@ -198,6 +198,29 @@ build-backend = "setuptools.build_meta"
 # ...
 ```
 
+Additional configuration
+------------------------
+
+You can pass additional configuration to Plux, either via the command line or your project `pyproject.toml`. 
+
+### Excluding Python packages during discovery
+
+When [discovering entrypoints](#discovering-entrypoints), Plux will try importing your code to discover Plugins.
+Some parts of your codebase might have side effects, or raise errors when imported outside a specific context like some database
+migration scripts.
+
+You can ignore those Python packages by specifying the `--exclude` flag to the entrypoints discovery commands (`python -m plux entrypoints` or `python setup.py plugins`).
+The option takes a list of comma-separated values that can be paths or package names.
+
+You can also specify those values in the `tool.plux` section of your  `pyproject.toml`:
+
+```toml
+# ...
+
+[tool.plux]
+exclude = ["**/database/alembic*"]
+```
+
 Install
 -------
 

@@ -20,6 +20,7 @@ def entrypoints(args):
     dist = get_distribution_from_workdir(os.getcwd())
 
     print("discovering plugins ...")
+    dist.command_options["plugins"] = {"exclude": ("command line", args.exclude)}
     dist.run_command("plugins")
 
     print(f"building {dist.get_name().replace('-', '_')}.egg-info...")
@@ -81,6 +82,11 @@ def main(argv=None):
     # Subparser for the 'generate' subcommand
     generate_parser = subparsers.add_parser(
         "entrypoints", help="Discover plugins and generate entry points"
+    )
+    generate_parser.add_argument(
+        "-e",
+        "--exclude",
+        help="a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).",
     )
     generate_parser.set_defaults(func=entrypoints)
 
