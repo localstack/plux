@@ -27,7 +27,7 @@ It provides tools to load plugins from entry points at run time, and to discover
 * `PluginManager`: manages the run time lifecycle of a Plugin, which has three states:
   * resolved: the entrypoint pointing to the PluginSpec was imported and the `PluginSpec` instance was created
   * init: the `PluginFactory` of the `PluginSpec` was successfully invoked
-  * loaded: the `load` method of the `Plugin` was successfully i[nvoked
+  * loaded: the `load` method of the `Plugin` was successfully invoked
 
 ![architecture](https://raw.githubusercontent.com/localstack/plux/main/docs/plux-architecture.png)
 

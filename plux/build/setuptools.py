@@ -42,7 +42,7 @@ class plugins(InfoCommon, setuptools.Command):
     description = "Discover plux plugins and store them in .egg_info"
 
     user_options: t.ClassVar[t.List[t.Tuple[str, str, str]]] = [
-        ('exclude=', 'e', "exclude those files when discovering plugins"),
+        ('exclude=', 'e', "a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself)."),
         # TODO: add more
     ]
 
@@ -414,7 +414,7 @@ def _path_to_module(path):
     Convert a path to a Python module to its module representation
     Example: plux/core/test -> plux.core.test
     """
-    return path.strip("/").replace("/", ".")
+    return '.'.join(Path(path).with_suffix('').parts)
 
 
 class _Filter:
