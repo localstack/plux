@@ -6,7 +6,7 @@ VENV_ACTIVATE = . $(VENV_DIR)/bin/activate
 
 venv: $(VENV_DIR)/bin/activate
 
-$(VENV_DIR)/bin/activate: setup.cfg
+$(VENV_DIR)/bin/activate: pyproject.toml
 	test -d $(VENV_DIR) || $(VENV_BIN) $(VENV_DIR)
 	$(VENV_ACTIVATE); pip install -e ".[dev]"
 	touch $(VENV_DIR)/bin/activate

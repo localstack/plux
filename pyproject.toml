@@ -1,11 +1,57 @@
-# plux project configuration
+[build-system]
+requires = ['hatchling']
+build-backend = "hatchling.build"
+
+[project]
+name = "plux"
+authors = [
+    { name = "Thomas Rausch", email = "info@localstack.cloud" }
+]
+description = "A dynamic code loading framework for building pluggable Python distributions"
+readme = "README.md"
+license = "Apache-2.0"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Utilities"
+]
+requires-python = ">=3.8"
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/localstack/plux"
+
+[project.optional-dependencies]
+dev = [
+    "setuptools",
+    "pytest==8.4.1",
+    "black==25.1.0",
+    "isort==6.0.1",
+]
+
+[project.entry-points."distutils.commands"]
+plugins = "plux.build.setuptools:plugins"
+
+[project.entry-points."egg_info.writers"]
+# this is actually not a writer, it's a reader :-)
+"plux.json" = "plux.build.setuptools:load_plux_entrypoints"
+
+[tool.hatch.version]
+path = "plux/__init__.py"
 
 [tool.black]
 line_length = 100
 include = '((plugin)/.*\.py$|(plux)/.*\.py$|tests/.*\.py$)'
-#extend_exclude = '()'
 
 [tool.isort]
 profile = 'black'
-#extend_skip = []
 line_length = 100
