@@ -6,7 +6,7 @@ VENV_ACTIVATE = . $(VENV_DIR)/bin/activate
 
 venv: $(VENV_DIR)/bin/activate
 
-$(VENV_DIR)/bin/activate: setup.cfg
+$(VENV_DIR)/bin/activate: pyproject.toml
 	test -d $(VENV_DIR) || $(VENV_BIN) $(VENV_DIR)
 	$(VENV_ACTIVATE); pip install -e ".[dev]"
 	touch $(VENV_DIR)/bin/activate
@@ -23,17 +23,14 @@ clean-dist: clean
 format:
 	$(VENV_ACTIVATE); python -m isort .; python -m black .
 
-build: venv
-	$(VENV_ACTIVATE); python setup.py build
-
 test: venv
 	$(VENV_ACTIVATE); python -m pytest
 
 dist: venv
-	$(VENV_ACTIVATE); python setup.py sdist bdist_wheel
+	$(VENV_ACTIVATE); python -m build
 
 install: venv
-	$(VENV_ACTIVATE); python setup.py install
+	$(VENV_ACTIVATE); pip install -e .
 
 upload: venv test dist
 	$(VENV_ACTIVATE); pip install --upgrade twine; twine upload dist/*
