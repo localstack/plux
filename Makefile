@@ -23,17 +23,14 @@ clean-dist: clean
 format:
 	$(VENV_ACTIVATE); python -m isort .; python -m black .
 
-build: venv
-	$(VENV_ACTIVATE); python setup.py build
-
 test: venv
 	$(VENV_ACTIVATE); python -m pytest
 
 dist: venv
-	$(VENV_ACTIVATE); python setup.py sdist bdist_wheel
+	$(VENV_ACTIVATE); python -m build
 
 install: venv
-	$(VENV_ACTIVATE); python setup.py install
+	$(VENV_ACTIVATE); pip install -e .
 
 upload: venv test dist
 	$(VENV_ACTIVATE); pip install --upgrade twine; twine upload dist/*

@@ -30,6 +30,7 @@ Repository = "https://github.com/localstack/plux"
 
 [project.optional-dependencies]
 dev = [
+    "build",
     "setuptools",
     "pytest==8.4.1",
     "black==25.1.0",
