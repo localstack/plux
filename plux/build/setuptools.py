@@ -10,11 +10,12 @@ import shutil
 import sys
 import typing as t
 from fnmatch import fnmatchcase
-from importlib.util import find_spec
 from pathlib import Path
 
 import setuptools
 from setuptools.command.egg_info import egg_info
+
+from plux.build import config
 
 try:
     from setuptools.command.editable_wheel import editable_wheel
@@ -61,7 +62,7 @@ class plugins(InfoCommon, setuptools.Command):
         # we merge the configuration from the CLI arguments with the configuration read from the `pyproject.toml`
         # [tool.plux] section
         project_config = read_plux_configuration(self.distribution)
-        file_exclude = project_config.get("exclude")
+        file_exclude = project_config.exclude
         if file_exclude:
             self.exclude = set(self.exclude) | set(file_exclude)
         self.exclude = [_path_to_module(item) for item in self.exclude]
@@ -198,7 +199,7 @@ def load_plux_entrypoints(cmd, file_name, file_path):
     write_entries(cmd, ep_file, ep_path)
 
 
-def get_plux_json_path(distribution):
+def get_plux_json_path(distribution: setuptools.Distribution) -> str:
     dirs = distribution.package_dir
     egg_base = (dirs or {}).get("", os.curdir)
     egg_info_dir = _to_filename(_safe_name(distribution.get_name())) + ".egg-info"
@@ -206,35 +207,20 @@ def get_plux_json_path(distribution):
     return os.path.join(egg_info_dir, "plux.json")
 
 
-def read_plux_configuration(distribution) -> dict:
+def read_plux_configuration(distribution) -> config.PluxConfiguration:
     """
-    Try reading the [tool.plux] section of the `pyproject.toml` TOML file of the Distribution, and returns it as a
-    dictionary.
+    Try reading the [tool.plux] section of the `pyproject.toml` TOML file of the Distribution, and parse it using our
+    config parser.
     """
-    if find_spec("tomllib"):
-        # the tomllib library is part of the standard library since 3.11
-        from tomllib import load as load_toml
-    elif find_spec("tomli"):
-        # setuptools vendors the tomli library in 3.10
-        from tomli import load as load_toml
-    else:
-        # if we cannot find a TOML lib, we do not return any configuration
-        return {}
-
     dirs = distribution.package_dir
     pyproject_base = (dirs or {}).get("", os.curdir)
     pyproject_file = os.path.join(pyproject_base, "pyproject.toml")
     if not os.path.exists(pyproject_file):
-        return {}
+        return config.PluxConfiguration()
 
-    with open(pyproject_file, "rb") as file:
-        pyproject_config = load_toml(file)
+    return config.parse_pyproject_toml(pyproject_file)
 
-    tool_table = pyproject_config.get("tool", {})
-    return tool_table.get("plux", {})
-
-
-def update_entrypoints(distribution, ep: EntryPointDict):
+def update_entrypoints(distribution: setuptools.Distribution, ep: EntryPointDict):
     if distribution.entry_points is None:
         distribution.entry_points = {}
 
