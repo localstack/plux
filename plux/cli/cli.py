@@ -101,9 +101,7 @@ def main(argv=None):
     subparsers = parser.add_subparsers(title="commands", dest="command", help="Available commands")
 
     # Subparser for the 'generate' subcommand
-    generate_parser = subparsers.add_parser(
-        "entrypoints", help="Discover plugins and generate entry points"
-    )
+    generate_parser = subparsers.add_parser("entrypoints", help="Discover plugins and generate entry points")
     generate_parser.add_argument(
         "-e",
         "--exclude",

@@ -2,6 +2,7 @@
 Module for our config wrapper. Currently, this only supports ``pyproject.toml`` files but could be extended in the
 future to support ``tox.ini``, ``setup.cfg``, etc.
 """
+
 import dataclasses
 import enum
 import os
@@ -18,6 +19,7 @@ class EntrypointBuildMode(enum.Enum):
     The alternative is ``manual``, where build hooks are disabled and the user is responsible for generating and
     referencing entry points.
     """
+
     MANUAL = "manual"
     BUILD_HOOK = "build-hook"
 
@@ -54,8 +56,12 @@ class PluxConfiguration:
         return PluxConfiguration(
             path=path if path is not None else self.path,
             exclude=list(set((exclude if exclude is not None else []) + self.exclude)),
-            entrypoint_build_mode=entrypoint_build_mode if entrypoint_build_mode is not None else self.entrypoint_build_mode,
-            entrypoint_static_file=entrypoint_static_file if entrypoint_static_file is not None else self.entrypoint_static_file,
+            entrypoint_build_mode=entrypoint_build_mode
+            if entrypoint_build_mode is not None
+            else self.entrypoint_build_mode,
+            entrypoint_static_file=entrypoint_static_file
+            if entrypoint_static_file is not None
+            else self.entrypoint_static_file,
         )
 
 

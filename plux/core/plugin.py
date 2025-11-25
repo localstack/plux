@@ -85,11 +85,7 @@ class PluginSpec:
         return self.__str__()
 
     def __eq__(self, other):
-        return (
-            self.namespace == other.namespace
-            and self.name == other.name
-            and self.factory == other.factory
-        )
+        return self.namespace == other.namespace and self.name == other.name and self.factory == other.factory
 
 
 class PluginFinder(abc.ABC):
@@ -231,7 +227,7 @@ class FunctionPlugin(Plugin):
 
     def should_load(self) -> bool:
         if self._should_load is not None:
-            if type(self._should_load) == bool:
+            if type(self._should_load) is bool:
                 return self._should_load
             else:
                 return self._should_load()

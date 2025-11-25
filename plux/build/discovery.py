@@ -1,6 +1,7 @@
 """
 Buildtool independent utils to discover plugins from the codebase, and write index files.
 """
+
 import configparser
 import inspect
 import json

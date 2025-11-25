@@ -197,9 +197,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
         if not filters:
             self.filters = [global_plugin_filter]
 
-        self.finder = finder or MetadataPluginFinder(
-            self.namespace, self._fire_on_resolve_exception
-        )
+        self.finder = finder or MetadataPluginFinder(self.namespace, self._fire_on_resolve_exception)
 
         self._plugin_index = None
         self._init_mutex = threading.RLock()
@@ -234,9 +232,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
             raise container.load_error
 
         if not container.is_loaded:
-            raise PluginException(
-                "plugin did not load correctly", namespace=self.namespace, name=name
-            )
+            raise PluginException("plugin did not load correctly", namespace=self.namespace, name=name)
 
         return container.plugin
 

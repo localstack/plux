@@ -20,8 +20,11 @@ clean:
 clean-dist: clean
 	rm -rf dist/
 
-format:
-	$(VENV_ACTIVATE); python -m isort .; python -m black .
+lint: venv
+	$(VENV_ACTIVATE); python -m ruff check .
+
+format: venv
+	$(VENV_ACTIVATE); python -m ruff format . && python -m ruff check . --fix
 
 test: venv
 	$(VENV_ACTIVATE); python -m pytest

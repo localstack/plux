@@ -1,6 +1,7 @@
 """
 Bindings to integrate plux into setuptools build processes.
 """
+
 import importlib
 import json
 import logging
@@ -30,6 +31,7 @@ except ImportError:
         def _ensure_dist_info(self, *args, **kwargs):
             pass
 
+
 from setuptools.command.egg_info import InfoCommon, write_entries
 
 from plux.core.entrypoint import EntryPointDict, discover_entry_points
@@ -44,6 +46,7 @@ LOG = logging.getLogger(__name__)
 # The following classes and methods are a way for plux to hook into
 # the setuptools build process either indirectly or programmatically.
 
+
 class plugins(InfoCommon, setuptools.Command):
     """
     Setuptools command that discovers plugins and writes them into the egg_info directory to a ``plux.json`` file.
@@ -57,11 +60,15 @@ class plugins(InfoCommon, setuptools.Command):
       ``patch_egg_info_command`` where we could implement this logic. More background can be found here:
       https://github.com/pypa/setuptools/discussions/4223.
     """
+
     description = "Discover plux plugins and store them in .egg_info"
 
     user_options: t.ClassVar[t.List[t.Tuple[str, str, str]]] = [
-        ('exclude=', 'e',
-         "a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself)."),
+        (
+            "exclude=",
+            "e",
+            "a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).",
+        ),
         # TODO: add more
     ]
 
@@ -84,7 +91,7 @@ class plugins(InfoCommon, setuptools.Command):
         )
 
     def run(self) -> None:
-        index_builder = create_plugin_index_builder(self.plux_config,self.distribution, output_format="json")
+        index_builder = create_plugin_index_builder(self.plux_config, self.distribution, output_format="json")
 
         self.debug_print(f"writing discovered plugins into {self.plux_json_path}")
         self.mkpath(os.path.dirname(self.plux_json_path))
@@ -233,14 +240,10 @@ def find_plugins(where=".", exclude=(), include=("*",)) -> EntryPointDict:
     )
     """
 
-    return discover_entry_points(
-        PackagePathPluginFinder(where=where, exclude=exclude, include=include)
-    )
+    return discover_entry_points(PackagePathPluginFinder(where=where, exclude=exclude, include=include))
 
 
-def load_entry_points(
-    where=".", exclude=(), include=("*",), merge: EntryPointDict = None
-) -> EntryPointDict:
+def load_entry_points(where=".", exclude=(), include=("*",), merge: EntryPointDict = None) -> EntryPointDict:
     """
     Finds plugins and builds and entry point map. This is to be used in a setup.py in the setup call:
 
@@ -289,6 +292,7 @@ def load_entry_points(
 # =========
 # The remaining methods are utilities
 
+
 def get_plux_json_path(distribution: setuptools.Distribution) -> str:
     """
     Returns the full path of ``plux.json`` file for the given distribution. The file is located within the .egg-info
@@ -327,11 +331,10 @@ def update_entrypoints(distribution: setuptools.Distribution, ep: EntryPointDict
     distribution.entry_points.update(ep)
 
 
-
 def create_plugin_index_builder(
     cfg: config.PluxConfiguration,
     distribution: setuptools.Distribution,
-    output_format: t.Literal["json", "ini"] = "json"
+    output_format: t.Literal["json", "ini"] = "json",
 ) -> PluginIndexBuilder:
     """
     Creates a PluginIndexBuilder instance for discovering plugins from a setuptools distribution. It uses a
