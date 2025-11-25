@@ -11,7 +11,7 @@ class EntryPoint(t.NamedTuple):
     group: str
 
 
-EntryPointDict = t.Dict[str, t.List[str]]
+EntryPointDict = dict[str, list[str]]
 
 
 def discover_entry_points(finder: PluginFinder) -> EntryPointDict:
@@ -24,7 +24,7 @@ def discover_entry_points(finder: PluginFinder) -> EntryPointDict:
     return to_entry_point_dict([spec_to_entry_point(spec) for spec in finder.find_plugins()])
 
 
-def to_entry_point_dict(eps: t.List[EntryPoint]) -> EntryPointDict:
+def to_entry_point_dict(eps: list[EntryPoint]) -> EntryPointDict:
     """
     Convert the list of EntryPoint objects to a dictionary that maps entry point groups to their respective list of
     ``name=value`` entry points. Each pair is represented as a string.

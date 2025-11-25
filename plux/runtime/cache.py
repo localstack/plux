@@ -6,7 +6,6 @@ import platform
 import struct
 import sys
 import threading
-import typing as t
 from importlib import metadata
 from pathlib import Path
 
@@ -67,7 +66,7 @@ class EntryPointsCache(EntryPointsResolver):
     _instance: "EntryPointsCache" = None
     _instance_lock: threading.RLock = threading.RLock()
 
-    _cache: t.Dict[t.Tuple[str, ...], t.Dict[str, t.List[metadata.EntryPoint]]]
+    _cache: dict[tuple[str, ...], dict[str, list[metadata.EntryPoint]]]
     """For each specific path (like sys.path), we store a dict of group -> [entry point]."""
 
     def __init__(self):
@@ -76,7 +75,7 @@ class EntryPointsCache(EntryPointsResolver):
         self._resolver = MetadataEntryPointsResolver()
         self._cache_dir = get_user_cache_dir() / "plux"
 
-    def get_entry_points(self) -> t.Dict[str, t.List[metadata.EntryPoint]]:
+    def get_entry_points(self) -> dict[str, list[metadata.EntryPoint]]:
         """
         Returns a dictionary of entry points for the current ``sys.path``.
         """
@@ -98,7 +97,7 @@ class EntryPointsCache(EntryPointsResolver):
 
             return self._cache[key]
 
-    def _build_and_store_index(self, cache_dir: Path) -> t.Dict[str, t.List[metadata.EntryPoint]]:
+    def _build_and_store_index(self, cache_dir: Path) -> dict[str, list[metadata.EntryPoint]]:
         # first, try and load the index from the file system
         path_key = self._calculate_hash_key(sys.path)
 
@@ -117,7 +116,7 @@ class EntryPointsCache(EntryPointsResolver):
 
         return index
 
-    def _calculate_hash_key(self, path: t.List[str]):
+    def _calculate_hash_key(self, path: list[str]):
         """
         Calculates a hash of all modified times of all ``entry_point.txt`` files in the path. Basic idea
         taken from ``stevedore._cache._hash_settings_for_path``. The main difference to it is that it also

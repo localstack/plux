@@ -35,7 +35,7 @@ class Plugin(abc.ABC):
 
     namespace: str
     name: str
-    requirements: t.List[str]
+    requirements: list[str]
 
     def should_load(self) -> bool:
         return True
@@ -94,7 +94,7 @@ class PluginFinder(abc.ABC):
     (e.g., using StevedorePluginFinder that finds plugins from entrypoints)
     """
 
-    def find_plugins(self) -> t.List[PluginSpec]:
+    def find_plugins(self) -> list[PluginSpec]:
         raise NotImplementedError  # pragma: no cover
 
 
@@ -148,8 +148,8 @@ class PluginLifecycleListener:  # pragma: no cover
         self,
         plugin_spec: PluginSpec,
         plugin: Plugin,
-        load_args: t.Union[t.List, t.Tuple],
-        load_kwargs: t.Dict,
+        load_args: list | tuple,
+        load_kwargs: dict,
     ):
         pass
 
@@ -163,7 +163,7 @@ class PluginLifecycleListener:  # pragma: no cover
 class CompositePluginLifecycleListener(PluginLifecycleListener):
     """A PluginLifecycleListener decorator that dispatches to multiple delegates."""
 
-    listeners: t.List[PluginLifecycleListener]
+    listeners: list[PluginLifecycleListener]
 
     def __init__(self, initial: t.Iterable[PluginLifecycleListener] = None):
         self.listeners = list(initial) if initial else []
@@ -210,7 +210,7 @@ class FunctionPlugin(Plugin):
     def __init__(
         self,
         fn: t.Callable,
-        should_load: t.Union[bool, t.Callable[[], bool]] = None,
+        should_load: bool | t.Callable[[], bool] = None,
         load: t.Callable = None,
     ) -> None:
         super().__init__()
@@ -238,7 +238,7 @@ class FunctionPlugin(Plugin):
 def plugin(
     namespace,
     name=None,
-    should_load: t.Union[bool, t.Callable[[], bool]] = None,
+    should_load: bool | t.Callable[[], bool] = None,
     load: t.Callable = None,
 ):
     """

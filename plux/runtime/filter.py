@@ -54,7 +54,7 @@ class MatchingPluginFilter:
     A MatchingPluginFilter can be used to exclude specific plugins from loading.
     """
 
-    exclusions: t.List[PluginSpecMatcher]
+    exclusions: list[PluginSpecMatcher]
 
     def __init__(self):
         self.exclusions = []

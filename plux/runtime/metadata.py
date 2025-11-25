@@ -6,23 +6,9 @@ import collections
 import inspect
 import io
 import os
-import sys
 import typing as t
 from functools import lru_cache
 from importlib import metadata
-
-if sys.version_info >= (3, 10):
-    from importlib.metadata import packages_distributions as metadata_packages_distributions
-else:
-
-    def metadata_packages_distributions() -> t.Mapping[str, t.List[str]]:
-        """Copied from Pyton 3.10 stdlib."""
-        pkg_to_dist = collections.defaultdict(list)
-        for dist in metadata.distributions():
-            for pkg in (dist.read_text("top_level.txt") or "").split():
-                pkg_to_dist[pkg].append(dist.metadata["Name"])
-        return dict(pkg_to_dist)
-
 
 from plux.core.entrypoint import EntryPointDict, to_entry_point_dict
 from plux.core.plugin import PluginSpec
@@ -30,8 +16,13 @@ from plux.core.plugin import PluginSpec
 Distribution = metadata.Distribution
 
 
+def metadata_packages_distributions():
+    """Wrapper around ``importlib.metadata.packages_distributions``, which returns a mapping of top-level packages."""
+    return metadata.packages_distributions()
+
+
 @lru_cache()
-def packages_distributions() -> t.Mapping[str, t.List[str]]:
+def packages_distributions() -> t.Mapping[str, list[str]]:
     """
     Cache wrapper around ``metadata.packages_distributions``, which returns a mapping of top-level packages to
     their distributions. This index is created by scanning all ``top_level.txt`` metadata files in the path.
@@ -53,7 +44,7 @@ def packages_distributions() -> t.Mapping[str, t.List[str]]:
     return distributions
 
 
-def resolve_distribution_information(plugin_spec: PluginSpec) -> t.Optional[Distribution]:
+def resolve_distribution_information(plugin_spec: PluginSpec) -> Distribution | None:
     """
     Resolves for a PluginSpec the python distribution package it comes from. Currently, this raises an
     error for plugins that come from a namespace package (i.e., when a package is part of multiple
@@ -83,7 +74,7 @@ def entry_points_from_metadata_path(metadata_path: str) -> EntryPointDict:
 
 def resolve_entry_points(
     distributions: t.Iterable[Distribution] = None,
-) -> t.List[metadata.EntryPoint]:
+) -> list[metadata.EntryPoint]:
     """
     Resolves all entry points using a combination of ``importlib.metadata``, and also follows entry points
     links in ``entry_points_editable.txt`` created by plux while building editable wheels.
@@ -120,7 +111,7 @@ def resolve_entry_points(
 
 def build_entry_point_index(
     entry_points: t.Iterable[metadata.EntryPoint],
-) -> t.Dict[str, t.List[metadata.EntryPoint]]:
+) -> dict[str, list[metadata.EntryPoint]]:
     """
     Organizes the given list of entry points into a dictionary that maps entry point groups to their
     respective entry points, which resembles the data structure of an ``entry_points.txt``.
@@ -138,24 +129,17 @@ def build_entry_point_index(
     return dict(result)
 
 
-if sys.version_info >= (3, 10):
+def parse_entry_points_text(text: str) -> list[metadata.EntryPoint]:
+    """
+    Parses the content of an ``entry_points.txt`` into a list of entry point objects.
 
-    def parse_entry_points_text(text: str) -> t.List[metadata.EntryPoint]:
-        """
-        Parses the content of an ``entry_points.txt`` into a list of entry point objects.
-
-        :param text: the string to parse
-        :return: a list of metadata EntryPoint objects
-        """
-        return metadata.EntryPoints._from_text(text)
-
-else:
-
-    def parse_entry_points_text(text: str) -> t.List[metadata.EntryPoint]:
-        return metadata.EntryPoint._from_text(text)
+    :param text: the string to parse
+    :return: a list of metadata EntryPoint objects
+    """
+    return metadata.EntryPoints._from_text(text)
 
 
-def serialize_entry_points_text(index: t.Dict[str, t.List[metadata.EntryPoint]]) -> str:
+def serialize_entry_points_text(index: dict[str, list[metadata.EntryPoint]]) -> str:
     """
     Serializes an entry point index generated via ``build_entry_point_index`` into a string that can be
     written into an ``entry_point.txt``. Example::
@@ -185,7 +169,7 @@ class EntryPointsResolver:
     Interface for something that builds an entry point index.
     """
 
-    def get_entry_points(self) -> t.Dict[str, t.List[metadata.EntryPoint]]:
+    def get_entry_points(self) -> dict[str, list[metadata.EntryPoint]]:
         raise NotImplementedError
 
 
@@ -194,5 +178,5 @@ class MetadataEntryPointsResolver(EntryPointsResolver):
     Implementation that uses regular ``importlib.metadata`` methods to resolve entry points.
     """
 
-    def get_entry_points(self) -> t.Dict[str, t.List[metadata.EntryPoint]]:
+    def get_entry_points(self) -> dict[str, list[metadata.EntryPoint]]:
         return build_entry_point_index(resolve_entry_points(metadata.distributions()))

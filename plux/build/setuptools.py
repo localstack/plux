@@ -64,7 +64,7 @@ class plugins(InfoCommon, setuptools.Command):
 
     description = "Discover plux plugins and store them in .egg_info"
 
-    user_options: t.ClassVar[t.List[t.Tuple[str, str, str]]] = [
+    user_options: t.ClassVar[list[tuple[str, str, str]]] = [
         (
             "exclude=",
             "e",
@@ -368,7 +368,7 @@ def entry_points_from_egg_info(egg_info_dir: str) -> EntryPointDict:
     return entry_points_from_metadata_path(egg_info_dir)
 
 
-def _should_read_existing_egg_info() -> t.Tuple[bool, t.Optional[str]]:
+def _should_read_existing_egg_info() -> tuple[bool, str | None]:
     # we want to read the .egg-info dir only if it exists, and if we are creating the egg_info or
     # installing it with pip install -e (which calls 'setup.py develop')
 
@@ -419,7 +419,7 @@ def _is_local_build_context():
     return False
 
 
-def find_egg_info_dir() -> t.Optional[str]:
+def find_egg_info_dir() -> str | None:
     """
     Heuristic to find the .egg-info dir of the current build context.
     """
@@ -546,8 +546,8 @@ class DistributionPackageFinder(_PackageFinder):
     def __init__(
         self,
         distribution: setuptools.Distribution,
-        exclude: t.Optional[t.Iterable[str]] = None,
-        include: t.Optional[t.Iterable[str]] = None,
+        exclude: t.Iterable[str] | None = None,
+        include: t.Iterable[str] | None = None,
     ):
         self.distribution = distribution
         self.exclude = _Filter(exclude or [])
@@ -596,7 +596,7 @@ class PluginFromPackageFinder(PluginFinder):
     def __init__(self, finder: _PackageFinder):
         self.finder = finder
 
-    def find_plugins(self) -> t.List[PluginSpec]:
+    def find_plugins(self) -> list[PluginSpec]:
         collector = ModuleScanningPluginFinder(self.load_modules())
         return collector.find_plugins()
 

@@ -20,7 +20,7 @@ LOG = logging.getLogger(__name__)
 P = t.TypeVar("P", bound=Plugin)
 
 
-def _call_safe(func: t.Callable, args: t.Tuple, exception_message: str):
+def _call_safe(func: t.Callable, args: tuple, exception_message: str):
     """
     Call the given function with the given arguments, and if it fails, log the given exception_message. If
     logging.DEBUG is set for the logger, then we also log the traceback. An exception is made for any
@@ -47,7 +47,7 @@ class PluginLifecycleNotifierMixin:
     Mixin that provides functions to dispatch calls to a PluginLifecycleListener in a safe way.
     """
 
-    listeners: t.List[PluginLifecycleListener]
+    listeners: list[PluginLifecycleListener]
 
     def _fire_on_resolve_after(self, plugin_spec):
         for listener in self.listeners:
@@ -155,19 +155,19 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
 
     namespace: str
 
-    load_args: t.Union[t.List, t.Tuple]
-    load_kwargs: t.Dict[str, t.Any]
-    listeners: t.List[PluginLifecycleListener]
-    filters: t.List[PluginFilter]
+    load_args: list | tuple
+    load_kwargs: dict[str, t.Any]
+    listeners: list[PluginLifecycleListener]
+    filters: list[PluginFilter]
 
     def __init__(
         self,
         namespace: str,
-        load_args: t.Union[t.List, t.Tuple] = None,
-        load_kwargs: t.Dict = None,
-        listener: t.Union[PluginLifecycleListener, t.Iterable[PluginLifecycleListener]] = None,
+        load_args: list | tuple = None,
+        load_kwargs: dict = None,
+        listener: PluginLifecycleListener | t.Iterable[PluginLifecycleListener] = None,
         finder: PluginFinder = None,
-        filters: t.List[PluginFilter] = None,
+        filters: list[PluginFilter] = None,
     ):
         """
         Create a new PluginManager.
@@ -236,7 +236,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
 
         return container.plugin
 
-    def load_all(self, propagate_exceptions=False) -> t.List[P]:
+    def load_all(self, propagate_exceptions=False) -> list[P]:
         """
         Attempts to load all plugins found in the namespace, and returns those that were loaded successfully. If
         propagate_exception is set to True, then the method will re-raise any errors as soon as it encouters them.
@@ -261,13 +261,13 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
 
         return plugins
 
-    def list_plugin_specs(self) -> t.List[PluginSpec]:
+    def list_plugin_specs(self) -> list[PluginSpec]:
         return [container.plugin_spec for container in self._plugins.values()]
 
-    def list_names(self) -> t.List[str]:
+    def list_names(self) -> list[str]:
         return [spec.name for spec in self.list_plugin_specs()]
 
-    def list_containers(self) -> t.List[PluginContainer[P]]:
+    def list_containers(self) -> list[PluginContainer[P]]:
         return list(self._plugins.values())
 
     def get_container(self, name: str) -> PluginContainer[P]:
@@ -280,7 +280,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
         return self._require_plugin(name).is_loaded
 
     @property
-    def _plugins(self) -> t.Dict[str, PluginContainer[P]]:
+    def _plugins(self) -> dict[str, PluginContainer[P]]:
         if self._plugin_index is None:
             with self._init_mutex:
                 if self._plugin_index is None:
@@ -363,7 +363,7 @@ class PluginManager(PluginLifecycleNotifierMixin, t.Generic[P]):
 
         return factory()
 
-    def _init_plugin_index(self) -> t.Dict[str, PluginContainer]:
+    def _init_plugin_index(self) -> dict[str, PluginContainer]:
         return {plugin.name: plugin for plugin in self._import_plugins() if plugin}
 
     def _import_plugins(self) -> t.Iterable[PluginContainer]:

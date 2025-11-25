@@ -1,4 +1,3 @@
-import typing as t
 from importlib import metadata
 from importlib.metadata import EntryPoint
 from unittest.mock import MagicMock
@@ -10,12 +9,12 @@ from plux.runtime.resolve import MetadataPluginFinder
 
 
 class DummyEntryPointsResolver(EntryPointsResolver):
-    entry_points: t.Dict[str, t.List[metadata.EntryPoint]]
+    entry_points: dict[str, list[metadata.EntryPoint]]
 
-    def __init__(self, entry_points: t.List[metadata.EntryPoint]):
+    def __init__(self, entry_points: list[metadata.EntryPoint]):
         self.entry_points = build_entry_point_index(entry_points)
 
-    def get_entry_points(self) -> t.Dict[str, t.List[metadata.EntryPoint]]:
+    def get_entry_points(self) -> dict[str, list[metadata.EntryPoint]]:
         return self.entry_points
 
 

@@ -32,7 +32,7 @@ class ModuleScanningPluginFinder(PluginFinder):
         self.modules = modules
         self.resolver = resolver or PluginSpecResolver()
 
-    def find_plugins(self) -> t.List[PluginSpec]:
+    def find_plugins(self) -> list[PluginSpec]:
         plugins = list()
 
         for module in self.modules:

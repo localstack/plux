@@ -31,7 +31,7 @@ class MetadataPluginFinder(PluginFinder):
         self.spec_resolver = spec_resolver or PluginSpecResolver()
         self.entry_points_resolver = entry_points_resolver or EntryPointsCache.instance()
 
-    def find_plugins(self) -> t.List[PluginSpec]:
+    def find_plugins(self) -> list[PluginSpec]:
         specs = []
         finds = self.entry_points_resolver.get_entry_points().get(self.namespace, [])
         for ep in finds:
