@@ -39,6 +39,10 @@ If an error occurs at any state of the lifecycle, the `PluginManager` informs th
 
 ### Discovering entrypoints
 
+Plux supports two modes for building entry points: **build-hooks mode** (default) and **manual mode**.
+
+#### Build-hooks mode (default)
+
 To build a source distribution and a wheel of your code with your plugins as entrypoints, simply run `python setup.py plugins sdist bdist_wheel`.
 If you don't have a `setup.py`, you can use the plux build frontend and run `python -m plux entrypoints`.
 
@@ -48,6 +52,42 @@ The command uses a special `PluginFinder` that collects from the codebase anythi
 When a setuptools command is used to create the distribution (e.g., `python setup.py sdist/bdist_wheel/...`), plux finds the `plux.json` plugin index and extends automatically the list of entry points (collected into `.egg-info/entry_points.txt`).
 The `plux.json` file becomes a part of the distribution, s.t., the plugins do not have to be discovered every time your distribution is installed elsewhere.
 Discovering at build time also works when using `python -m build`, since it calls registered setuptools scripts.
+
+#### Manual mode
+
+Manual mode is useful for isolated build environments where dependencies cannot be installed, or when build hooks are not suitable for your build process.
+
+To enable manual mode, add the following to your `pyproject.toml`:
+
+```toml
+[tool.plux]
+entrypoint_build_mode = "manual"
+```
+
+In manual mode, plux does not use build hooks. Instead, you manually generate entry points by running:
+
+```bash
+python -m plux entrypoints
+```
+
+This creates a `plux.ini` file in your working directory with the discovered plugins. You can then include this file in your distribution by configuring your `pyproject.toml`:
+
+```toml
+[project]
+dynamic = ["entry-points"]
+
+[tool.setuptools.package-data]
+"*" = ["plux.ini"]
+
+[tool.setuptools.dynamic]
+entry-points = {file = ["plux.ini"]}
+```
+
+You can also manually control the output format and location:
+
+```bash
+python -m plux discover --format ini --output plux.ini
+```
 
 
 Examples
@@ -201,9 +241,35 @@ build-backend = "setuptools.build_meta"
 Additional configuration
 ------------------------
 
-You can pass additional configuration to Plux, either via the command line or your project `pyproject.toml`. 
+You can pass additional configuration to Plux, either via the command line or your project `pyproject.toml`.
 
-### Excluding Python packages during discovery
+### Configuration options
+
+The following options can be configured in the `[tool.plux]` section of your `pyproject.toml`:
+
+```toml
+[tool.plux]
+# The build mode for entry points: "build-hooks" (default) or "manual"
+entrypoint_build_mode = "manual"
+
+# The file path to scan for plugins (optional)
+path = "mysrc"
+
+# Python packages to exclude during discovery (optional)
+exclude = ["**/database/alembic*"]
+```
+
+#### `entrypoint_build_mode`
+
+Controls how plux generates entry points:
+- `build-hooks` (default): Plux automatically hooks into the build process to generate entry points
+- `manual`: You manually control when and how entry points are generated (see [Manual mode](#manual-mode))
+
+#### `path`
+
+Specifies the file path to scan for plugins. By default, plux scans the entire project.
+
+#### `exclude`
 
 When [discovering entrypoints](#discovering-entrypoints), Plux will try importing your code to discover Plugins.
 Some parts of your codebase might have side effects, or raise errors when imported outside a specific context like some database
@@ -212,14 +278,7 @@ migration scripts.
 You can ignore those Python packages by specifying the `--exclude` flag to the entrypoints discovery commands (`python -m plux entrypoints` or `python setup.py plugins`).
 The option takes a list of comma-separated values that can be paths or package names.
 
-You can also specify those values in the `tool.plux` section of your  `pyproject.toml`:
-
-```toml
-# ...
-
-[tool.plux]
-exclude = ["**/database/alembic*"]
-```
+You can also specify those values in the `tool.plux` section of your `pyproject.toml` as shown above.
 
 Install
 -------

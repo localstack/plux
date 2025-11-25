@@ -25,6 +25,14 @@ def discover_entry_points(finder: PluginFinder) -> EntryPointDict:
 
 
 def to_entry_point_dict(eps: t.List[EntryPoint]) -> EntryPointDict:
+    """
+    Convert the list of EntryPoint objects to a dictionary that maps entry point groups to their respective list of
+    ``name=value`` entry points. Each pair is represented as a string.
+
+    :param eps: List of entrypoints to convert
+    :return: an entry point dictionary
+    :raises ValueError: if there are duplicate entry points in the same group
+    """
     result = defaultdict(list)
     names = defaultdict(set)  # book-keeping to check duplicates
 

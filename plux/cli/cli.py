@@ -1,5 +1,6 @@
 """
-A plux frontend, currently only supports setuptools.
+A plux CLI frontend. Currently it heavily relies on setuptools, but should be extended in the future to support other
+build backends like hatchling or poetry.
 """
 
 import argparse
@@ -8,37 +9,61 @@ import logging
 import os
 import sys
 
+from plux.build import config
 from plux.build.setuptools import (
+    create_plugin_index_builder,
     find_egg_info_dir,
-    find_plugins,
     get_distribution_from_workdir,
     get_plux_json_path,
 )
 
 
-def entrypoints(args):
+def entrypoints(args: argparse.Namespace):
     dist = get_distribution_from_workdir(os.getcwd())
+    cfg = config.read_plux_config_from_workdir(os.getcwd())
+    cfg.merge(
+        exclude=args.exclude.split(",") if args.exclude else None,
+    )
 
-    print("discovering plugins ...")
-    dist.command_options["plugins"] = {"exclude": ("command line", args.exclude)}
-    dist.run_command("plugins")
+    print(f"entry point build mode: {cfg.entrypoint_build_mode.value}")
 
-    print(f"building {dist.get_name().replace('-', '_')}.egg-info...")
-    dist.run_command("egg_info")
+    if cfg.entrypoint_build_mode == config.EntrypointBuildMode.BUILD_HOOK:
+        # TODO: this is code specific to setuptools. integrating additional build tools would require refactoring.
+        print("discovering plugins ...")
+        dist.command_options["plugins"] = {"exclude": ("command line", args.exclude)}
+        dist.run_command("plugins")
 
-    print("discovered plugins:")
-    # discover plux plugins
-    with open(get_plux_json_path(dist)) as fd:
-        plux_json = json.load(fd)
-    _pprint_plux_json(plux_json)
+        print(f"building {dist.get_name().replace('-', '_')}.egg-info...")
+        dist.run_command("egg_info")
+
+        print("discovered plugins:")
+        # print discovered plux plugins
+        with open(get_plux_json_path(dist)) as fd:
+            plux_json = json.load(fd)
+            json.dump(plux_json, sys.stdout, indent=2)
+
+    elif cfg.entrypoint_build_mode == config.EntrypointBuildMode.MANUAL:
+        path = os.path.join(os.getcwd(), cfg.entrypoint_static_file)
+
+        print(f"discovering plugins and writing to {path} ...")
+        builder = create_plugin_index_builder(cfg, dist, output_format="ini")
+        with open(path, "w") as fd:
+            builder.write(fd)
 
 
-def discover(args):
-    ep = find_plugins(exclude=("tests", "tests.*"))  # TODO: options
-    _pprint_plux_json(ep)
+def discover(args: argparse.Namespace):
+    dist = get_distribution_from_workdir(os.getcwd())
+    cfg = config.read_plux_config_from_workdir(os.getcwd())
+    cfg = cfg.merge(
+        exclude=args.exclude.split(",") if args.exclude else None,
+        path=args.path,
+    )
+
+    builder = create_plugin_index_builder(cfg, dist, output_format=args.format)
+    builder.write(args.output)
 
 
-def show(args):
+def show(args: argparse.Namespace):
     egg_info_dir = find_egg_info_dir()
     if not egg_info_dir:
         print("no *.egg-info directory")
@@ -62,10 +87,6 @@ def resolve(args):
 
     for spec in manager.list_plugin_specs():
         print(f"{spec.namespace}:{spec.name} = {spec.factory.__module__}:{spec.factory.__name__}")
-
-
-def _pprint_plux_json(plux_json):
-    print(json.dumps(plux_json, indent=2))
 
 
 def main(argv=None):
@@ -92,6 +113,30 @@ def main(argv=None):
 
     # Subparser for the 'discover' subcommand
     discover_parser = subparsers.add_parser("discover", help="Discover plugins and print them")
+    discover_parser.add_argument(
+        "-p",
+        "--path",
+        help="the file path where to look for plugins'",
+    )
+    discover_parser.add_argument(
+        "-e",
+        "--exclude",
+        help="a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).",
+    )
+    discover_parser.add_argument(
+        "-f",
+        "--format",
+        help="the format in which to output the entrypoints. can be 'json' or 'ini', defaults to 'dict'.",
+        default="json",
+        choices=["json", "ini"],
+    )
+    discover_parser.add_argument(
+        "-o",
+        "--output",
+        type=argparse.FileType("w"),
+        default=sys.stdout,
+        help="Output file path, defaults to stdout",
+    )
     discover_parser.set_defaults(func=discover)
 
     # Subparser for the 'resolve' subcommand
