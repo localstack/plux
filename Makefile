@@ -24,7 +24,7 @@ lint:
 	$(VENV_ACTIVATE); python -m ruff check .
 
 format:
-	$(VENV_ACTIVATE); python -m ruff format && python -m ruff check --fix
+	$(VENV_ACTIVATE); python -m ruff format . && python -m ruff check . --fix
 
 test: venv
 	$(VENV_ACTIVATE); python -m pytest
