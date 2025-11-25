@@ -257,6 +257,9 @@ path = "mysrc"
 
 # Python packages to exclude during discovery (optional)
 exclude = ["**/database/alembic*"]
+
+# Python packages to include during discovery (optional), setting this will ignore all other paths
+include = ["**/database*"]
 ```
 
 #### `entrypoint_build_mode`
@@ -269,16 +272,40 @@ Controls how plux generates entry points:
 
 Specifies the file path to scan for plugins. By default, plux scans the entire project.
 
+#### `include`
+
+A list of paths to include during plugin discovery. If specified, only the named items will be included. If not specified, all found items in the path will be included. The `include` parameter supports shell-style wildcard patterns.
+
+Examples:
+```bash
+# Include multiple patterns
+python -m plux discover --include "myapp/plugins*,myapp/extensions*" --format ini
+```
+
+You can also specify these values in the `[tool.plux]` section of your `pyproject.toml` as shown above.
+
+**Note:** When `include` is specified, plux ignores all other paths that would otherwise be found.
+
+
 #### `exclude`
 
 When [discovering entrypoints](#discovering-entrypoints), Plux will try importing your code to discover Plugins.
 Some parts of your codebase might have side effects, or raise errors when imported outside a specific context like some database
 migration scripts.
 
-You can ignore those Python packages by specifying the `--exclude` flag to the entrypoints discovery commands (`python -m plux entrypoints` or `python setup.py plugins`).
-The option takes a list of comma-separated values that can be paths or package names.
+You can ignore those Python packages by specifying the `--exclude` flag to the entrypoints discovery commands:
 
-You can also specify those values in the `tool.plux` section of your `pyproject.toml` as shown above.
+```bash
+# Exclude database migration scripts
+python -m plux entrypoints --exclude "**/database/alembic*"
+
+# Exclude multiple patterns (comma-separated)
+python -m plux discover --exclude "tests*,docs*" --format ini
+```
+
+The option takes a list of comma-separated values that can be paths or package names with shell-style wildcards. `'foo.*'` will exclude all subpackages of `foo` (but not `foo` itself).
+
+You can also specify these values in the `[tool.plux]` section of your `pyproject.toml` as shown above.
 
 Install
 -------

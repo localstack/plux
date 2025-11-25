@@ -36,6 +36,11 @@ class PluxConfiguration:
     exclude: list[str] = dataclasses.field(default_factory=list)
     """A list of paths to exclude from scanning."""
 
+    include: list[str] = dataclasses.field(default_factory=list)
+    """A list of paths to include in scanning. If it's specified, only the named items will be included. If it's not
+    specified, all found items will be included. ``include`` can contain shell style wildcard patterns just like
+    ``exclude``."""
+
     entrypoint_build_mode: EntrypointBuildMode = EntrypointBuildMode.BUILD_HOOK
     """The point in the build process path plugins should be discovered and entrypoints generated."""
 
@@ -46,6 +51,7 @@ class PluxConfiguration:
         self,
         path: str = None,
         exclude: list[str] = None,
+        include: list[str] = None,
         entrypoint_build_mode: EntrypointBuildMode = None,
         entrypoint_static_file: str = None,
     ) -> "PluxConfiguration":
@@ -56,6 +62,7 @@ class PluxConfiguration:
         return PluxConfiguration(
             path=path if path is not None else self.path,
             exclude=list(set((exclude if exclude is not None else []) + self.exclude)),
+            include=list(set((include if include is not None else []) + self.include)),
             entrypoint_build_mode=entrypoint_build_mode
             if entrypoint_build_mode is not None
             else self.entrypoint_build_mode,

@@ -23,6 +23,7 @@ def entrypoints(args: argparse.Namespace):
     cfg = config.read_plux_config_from_workdir(os.getcwd())
     cfg.merge(
         exclude=args.exclude.split(",") if args.exclude else None,
+        include=args.include.split(",") if args.include else None,
     )
 
     print(f"entry point build mode: {cfg.entrypoint_build_mode.value}")
@@ -30,7 +31,10 @@ def entrypoints(args: argparse.Namespace):
     if cfg.entrypoint_build_mode == config.EntrypointBuildMode.BUILD_HOOK:
         # TODO: this is code specific to setuptools. integrating additional build tools would require refactoring.
         print("discovering plugins ...")
-        dist.command_options["plugins"] = {"exclude": ("command line", args.exclude)}
+        dist.command_options["plugins"] = {
+            "exclude": ("command line", args.exclude),
+            "include": ("command line", args.include),
+        }
         dist.run_command("plugins")
 
         print(f"building {dist.get_name().replace('-', '_')}.egg-info...")
@@ -56,6 +60,7 @@ def discover(args: argparse.Namespace):
     cfg = config.read_plux_config_from_workdir(os.getcwd())
     cfg = cfg.merge(
         exclude=args.exclude.split(",") if args.exclude else None,
+        include=args.include.split(",") if args.include else None,
         path=args.path,
     )
 
@@ -107,6 +112,13 @@ def main(argv=None):
         "--exclude",
         help="a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).",
     )
+    generate_parser.add_argument(
+        "-i",
+        "--include",
+        help="a sequence of paths to include; If it's specified, only the named items will be included. If it's not "
+        "specified, all found items in the path will be included. 'include' can contain shell style wildcard "
+        "patterns just like 'exclude'",
+    )
     generate_parser.set_defaults(func=entrypoints)
 
     # Subparser for the 'discover' subcommand
@@ -120,6 +132,13 @@ def main(argv=None):
         "-e",
         "--exclude",
         help="a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).",
+    )
+    discover_parser.add_argument(
+        "-i",
+        "--include",
+        help="a sequence of paths to include; If it's specified, only the named items will be included. If it's not "
+        "specified, all found items in the path will be included. 'include' can contain shell style wildcard "
+        "patterns just like 'exclude'",
     )
     discover_parser.add_argument(
         "-f",
