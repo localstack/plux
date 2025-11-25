@@ -147,14 +147,14 @@ class TestPluginManager:
 
         assert c_shouldload.init_error is None
         assert c_shouldnotload.init_error is None
-        assert type(c_init_errors.init_error) == ValueError
+        assert type(c_init_errors.init_error) is ValueError
         assert c_load_errors.init_error is None
         assert c_shouldalsoload.init_error is None
 
         assert c_shouldload.load_error is None
         assert c_shouldnotload.load_error is None
         assert c_init_errors.load_error is None
-        assert type(c_load_errors.load_error) == ValueError
+        assert type(c_load_errors.load_error) is ValueError
         assert c_shouldalsoload.load_error is None
 
     def test_load_all_propagate_exception(self):

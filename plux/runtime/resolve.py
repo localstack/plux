@@ -49,9 +49,7 @@ class MetadataPluginFinder(PluginFinder):
             return self.spec_resolver.resolve(source)
         except Exception as e:
             if LOG.isEnabledFor(logging.DEBUG):
-                LOG.exception(
-                    "error resolving PluginSpec for plugin %s.%s", self.namespace, entry_point.name
-                )
+                LOG.exception("error resolving PluginSpec for plugin %s.%s", self.namespace, entry_point.name)
 
             if self.on_resolve_exception_callback:
                 self.on_resolve_exception_callback(self.namespace, entry_point, e)

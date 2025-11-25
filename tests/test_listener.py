@@ -84,9 +84,7 @@ class TestListener:
         class _DisableListener(PluginLifecycleListener):
             def on_init_after(self, plugin_spec: PluginSpec, plugin: Plugin):
                 if plugin_spec.name == "plugin2":
-                    raise PluginDisabled(
-                        plugin_spec.namespace, plugin_spec.name, "decided during init"
-                    )
+                    raise PluginDisabled(plugin_spec.namespace, plugin_spec.name, "decided during init")
 
         manager = PluginManager(
             "test.plugins.dummy",
@@ -104,13 +102,9 @@ class TestListener:
 
     def test_on_load_before_can_disable_plugin(self, dummy_plugin_finder):
         class _DisableListener(PluginLifecycleListener):
-            def on_load_before(
-                self, plugin_spec: PluginSpec, _plugin: Plugin, _load_args, _load_kwargs
-            ):
+            def on_load_before(self, plugin_spec: PluginSpec, _plugin: Plugin, _load_args, _load_kwargs):
                 if plugin_spec.name == "plugin2":
-                    raise PluginDisabled(
-                        plugin_spec.namespace, plugin_spec.name, "decided during load"
-                    )
+                    raise PluginDisabled(plugin_spec.namespace, plugin_spec.name, "decided during load")
 
         manager = PluginManager(
             "test.plugins.dummy",
@@ -128,9 +122,7 @@ class TestListener:
 
     def test_on_after_before_with_error(self, dummy_plugin_finder):
         class _DisableListener(PluginLifecycleListener):
-            def on_load_after(
-                self, plugin_spec: PluginSpec, plugin: Plugin, load_result: t.Any = None
-            ):
+            def on_load_after(self, plugin_spec: PluginSpec, plugin: Plugin, load_result: t.Any = None):
                 if plugin_spec.name == "plugin2":
                     raise PluginException("error loading plugin 2")
 

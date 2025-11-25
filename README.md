@@ -5,7 +5,7 @@ Plux
   <a href="https://github.com/localstack/plux/actions/workflows/build.yml"><img alt="CI badge" src="https://github.com/localstack/plux/actions/workflows/build.yml/badge.svg"></img></a>
   <a href="https://pypi.org/project/plux/"><img alt="PyPI Version" src="https://img.shields.io/pypi/v/plux?color=blue"></a>
   <a href="https://img.shields.io/pypi/l/plux.svg"><img alt="PyPI License" src="https://img.shields.io/pypi/l/plux.svg"></a>
-  <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+  <a href="https://github.com/astral-sh/ruff"><img alt="Code style: ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a>
 </p>
 
 plux is the dynamic code loading framework used in [LocalStack](https://github.com/localstack/localstack).
