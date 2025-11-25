@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "test-project"
+authors = [
+    { name = "LocalStack Contributors", email = "info@localstack.cloud" }
+]
+version = "0.1.0"
+description = "A test project to test plux with pyproject.toml projects and manual build mode"
+dependencies = [
+    "plux",
+    "build",
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = [
+    "entry-points",
+]
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.dynamic]
+entry-points = { file = ["plux.ini"] }
+
+[tool.setuptools.packages.find]
+include = ["mysrc*"]
+
+[tool.plux]
+entrypoint_build_mode = "manual"
