@@ -20,10 +20,10 @@ clean:
 clean-dist: clean
 	rm -rf dist/
 
-lint:
+lint: venv
 	$(VENV_ACTIVATE); python -m ruff check .
 
-format:
+format: venv
 	$(VENV_ACTIVATE); python -m ruff format . && python -m ruff check . --fix
 
 test: venv
