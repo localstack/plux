@@ -41,6 +41,7 @@ from .discovery import ModuleScanningPluginFinder, PluginIndexBuilder
 
 LOG = logging.getLogger(__name__)
 
+
 # SETUPTOOLS HOOKS
 # ================
 # The following classes and methods are a way for plux to hook into
@@ -69,7 +70,14 @@ class plugins(InfoCommon, setuptools.Command):
             "e",
             "a sequence of paths to exclude; '*' can be used as a wildcard in the names. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself).",
         ),
-        # TODO: add more
+        (
+            "include=",
+            "i",
+            "a sequence of paths to include; If it's specified, only the named items will be included. If it's not "
+            "specified, all found items in the path will be included. 'include' can contain shell style wildcard "
+            "patterns just like 'exclude'",
+        ),
+        # TODO: add more, this should mirror the entrypoints or discover cli
     ]
 
     egg_info: str
@@ -77,17 +85,20 @@ class plugins(InfoCommon, setuptools.Command):
     def initialize_options(self) -> None:
         self.plux_json_path = None
         self.exclude = None
+        self.include = None
         self.plux_config = None
 
     def finalize_options(self) -> None:
         self.plux_json_path = get_plux_json_path(self.distribution)
         self.ensure_string_list("exclude")
+        self.ensure_string_list("include")
 
         # we merge the configuration from the CLI arguments with the configuration read from the `pyproject.toml`
         # [tool.plux] section
         self.plux_config = read_plux_configuration(self.distribution)
         self.plux_config = self.plux_config.merge(
             exclude=self.exclude,
+            include=self.include,
         )
 
     def run(self) -> None:
@@ -342,7 +353,10 @@ def create_plugin_index_builder(
     the path given in the PluxConfiguration). However, it respects excludes given in the PluxConfiguration.
     """
     exclude = [_path_to_module(item) for item in cfg.exclude]
-    plugin_finder = PluginFromPackageFinder(DistributionPackageFinder(distribution, exclude=exclude))
+    include = [_path_to_module(item) for item in cfg.include]
+    plugin_finder = PluginFromPackageFinder(
+        DistributionPackageFinder(distribution, exclude=exclude, include=include)
+    )
 
     return PluginIndexBuilder(plugin_finder, output_format)
 
@@ -491,6 +505,18 @@ class _Filter:
         return any(fnmatchcase(item, pat) for pat in self._patterns)
 
 
+class _MatchAllFilter(_Filter):
+    """
+    Filter that is equivalent to ``_Filter(["*"])``.
+    """
+
+    def __init__(self):
+        super().__init__([])
+
+    def __call__(self, item: str):
+        return True
+
+
 class _PackageFinder:
     """
     Generate a list of Python packages. How these are generated depends on the implementation.
@@ -511,14 +537,21 @@ class DistributionPackageFinder(_PackageFinder):
     then the ``[tool.setuptools.package.find]`` config will be interpreted, resolved, and then
     ``distribution.packages`` will contain the resolved packages. This already contains namespace packages
     correctly if configured.
-    You can additionally pass a sequence of values to the `exclude` parameters to provide a list of Unix shell style
+    You can additionally pass a sequence of values to the ``exclude`` parameters to provide a list of Unix shell style
     patterns that will be matched against the Python packages to exclude them from the resolved packages.
-    Wildcards are allowed in the patterns with '*'. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo' itself)
+    Wildcards are allowed in the patterns with '*'. 'foo.*' will exclude all subpackages of 'foo' (but not 'foo'
+    itself). You can also pass ``include`` parameters, as specified in the ``PluxConfiguration``.
     """
 
-    def __init__(self, distribution: setuptools.Distribution, exclude: t.Optional[t.Iterable[str]] = None):
+    def __init__(
+        self,
+        distribution: setuptools.Distribution,
+        exclude: t.Optional[t.Iterable[str]] = None,
+        include: t.Optional[t.Iterable[str]] = None,
+    ):
         self.distribution = distribution
         self.exclude = _Filter(exclude or [])
+        self.include = _Filter(include) if include else _MatchAllFilter()
 
     def find_packages(self) -> t.Iterable[str]:
         return self.filter_packages(self.distribution.packages)
@@ -536,7 +569,7 @@ class DistributionPackageFinder(_PackageFinder):
         return where
 
     def filter_packages(self, packages: t.Iterable[str]) -> t.Iterable[str]:
-        return [item for item in packages if not self.exclude(item)]
+        return [item for item in packages if not self.exclude(item) and self.include(item)]
 
 
 class DefaultPackageFinder(_PackageFinder):
