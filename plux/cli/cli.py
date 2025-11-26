@@ -4,83 +4,101 @@ build backends like hatchling or poetry.
 """
 
 import argparse
-import json
 import logging
 import os
 import sys
 
 from plux.build import config
-from plux.build.setuptools import (
-    create_plugin_index_builder,
-    find_egg_info_dir,
-    get_distribution_from_workdir,
-    get_plux_json_path,
-)
+from plux.build.project import Project
+
+LOG = logging.getLogger(__name__)
+
+
+def _get_build_backend() -> str | None:
+    # TODO: should read this from the project configuration instead somehow.
+    try:
+        import setuptools  # noqa
+
+        return "setuptools"
+    except ImportError:
+        pass
+
+    try:
+        import hatchling  # noqa
+
+        return "hatchling"
+    except ImportError:
+        pass
+
+    return None
+
+
+def _load_project(args: argparse.Namespace) -> Project:
+    backend = _get_build_backend()
+    workdir = args.workdir
+
+    if args.verbose:
+        print(f"loading project config from {workdir}, determined build backend is: {backend}")
+
+    if backend == "setuptools":
+        from plux.build.setuptools import SetuptoolsProject
+
+        return SetuptoolsProject(workdir)
+    elif backend == "hatchling":
+        raise NotImplementedError("Hatchling is not yet supported as build backend")
+    else:
+        raise RuntimeError(
+            "No supported build backend found. Plux needs either setuptools or hatchling to work."
+        )
 
 
 def entrypoints(args: argparse.Namespace):
-    dist = get_distribution_from_workdir(os.getcwd())
-    cfg = config.read_plux_config_from_workdir(os.getcwd())
-    cfg.merge(
+    project = _load_project(args)
+    project.config = project.config.merge(
         exclude=args.exclude.split(",") if args.exclude else None,
         include=args.include.split(",") if args.include else None,
     )
+    cfg = project.config
 
     print(f"entry point build mode: {cfg.entrypoint_build_mode.value}")
 
     if cfg.entrypoint_build_mode == config.EntrypointBuildMode.BUILD_HOOK:
-        # TODO: this is code specific to setuptools. integrating additional build tools would require refactoring.
-        print("discovering plugins ...")
-        dist.command_options["plugins"] = {
-            "exclude": ("command line", args.exclude),
-            "include": ("command line", args.include),
-        }
-        dist.run_command("plugins")
-
-        print(f"building {dist.get_name().replace('-', '_')}.egg-info...")
-        dist.run_command("egg_info")
-
-        print("discovered plugins:")
-        # print discovered plux plugins
-        with open(get_plux_json_path(dist)) as fd:
-            plux_json = json.load(fd)
-            json.dump(plux_json, sys.stdout, indent=2)
-
+        print("discovering plugins and building entrypoints automatically...")
+        project.build_entrypoints()
     elif cfg.entrypoint_build_mode == config.EntrypointBuildMode.MANUAL:
         path = os.path.join(os.getcwd(), cfg.entrypoint_static_file)
-
         print(f"discovering plugins and writing to {path} ...")
-        builder = create_plugin_index_builder(cfg, dist, output_format="ini")
+        builder = project.create_plugin_index_builder()
         with open(path, "w") as fd:
-            builder.write(fd)
+            builder.write(fd, output_format="ini")
 
 
 def discover(args: argparse.Namespace):
-    dist = get_distribution_from_workdir(os.getcwd())
-    cfg = config.read_plux_config_from_workdir(os.getcwd())
-    cfg = cfg.merge(
+    project = _load_project(args)
+    project.config = project.config.merge(
+        path=args.path,
         exclude=args.exclude.split(",") if args.exclude else None,
         include=args.include.split(",") if args.include else None,
-        path=args.path,
     )
 
-    builder = create_plugin_index_builder(cfg, dist, output_format=args.format)
-    builder.write(args.output)
+    builder = project.create_plugin_index_builder()
+    builder.write(fp=args.output, output_format=args.format)
 
 
 def show(args: argparse.Namespace):
-    egg_info_dir = find_egg_info_dir()
-    if not egg_info_dir:
-        print("no *.egg-info directory")
+    project = _load_project(args)
+
+    try:
+        entrypoints_file = project.find_entry_point_file()
+    except FileNotFoundError as e:
+        print(f"Entrypoints file could not be located: {e}")
         return
 
-    txt = os.path.join(egg_info_dir, "entry_points.txt")
-    if not os.path.isfile(txt):
-        print("no entry points to show")
+    if not entrypoints_file.exists():
+        print(f"No entrypoints file found at {entrypoints_file}, nothing to show")
         return
 
-    with open(txt) as fd:
-        print(fd.read())
+    print(entrypoints_file.read_text())
 
 
 def resolve(args):

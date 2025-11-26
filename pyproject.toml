@@ -12,7 +12,6 @@ readme = "README.md"
 license = "Apache-2.0"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -36,6 +35,15 @@ dev = [
     "ruff==0.9.1",
 ]
 
+[tool.hatch.version]
+path = "plux/__init__.py"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+# integrations with setuptools
+
 [project.entry-points."distutils.commands"]
 plugins = "plux.build.setuptools:plugins"
 
@@ -43,9 +51,3 @@ plugins = "plux.build.setuptools:plugins"
 # this is actually not a writer, it's a reader :-)
 "plux.json" = "plux.build.setuptools:load_plux_entrypoints"
 
-[tool.hatch.version]
-path = "plux/__init__.py"
-
-[tool.ruff]
-line-length = 110
-target-version = "py310"

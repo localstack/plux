@@ -2,7 +2,6 @@
 Bindings to integrate plux into setuptools build processes.
 """
 
-import importlib
 import json
 import logging
 import os
@@ -17,7 +16,8 @@ import setuptools
 from setuptools.command.egg_info import egg_info
 
 from plux.build import config
-from .config import EntrypointBuildMode
+from plux.build.config import EntrypointBuildMode
+from plux.build.project import Project
 
 try:
     from setuptools.command.editable_wheel import editable_wheel
@@ -35,9 +35,9 @@ except ImportError:
 from setuptools.command.egg_info import InfoCommon, write_entries
 
 from plux.core.entrypoint import EntryPointDict, discover_entry_points
-from plux.core.plugin import PluginFinder, PluginSpec
 from plux.runtime.metadata import entry_points_from_metadata_path
-from .discovery import ModuleScanningPluginFinder, PluginIndexBuilder
+from plux.build.discovery import PluginFromPackageFinder, PackageFinder
+from plux.build.index import PluginIndexBuilder
 
 LOG = logging.getLogger(__name__)
 
@@ -102,8 +102,8 @@ class plugins(InfoCommon, setuptools.Command):
         )
 
     def run(self) -> None:
-        index_builder = create_plugin_index_builder(self.plux_config, self.distribution, output_format="json")
-
+        # TODO: should be reconciled with Project.build_entrypoints()
+        index_builder = create_plugin_index_builder(self.plux_config, self.distribution)
         self.debug_print(f"writing discovered plugins into {self.plux_json_path}")
         self.mkpath(os.path.dirname(self.plux_json_path))
         with open(self.plux_json_path, "w") as fp:
@@ -304,6 +304,52 @@ def load_entry_points(where=".", exclude=(), include=("*",), merge: EntryPointDi
 # The remaining methods are utilities
 
 
+class SetuptoolsProject(Project):
+    distribution: setuptools.Distribution
+
+    def __init__(self, workdir: str = None):
+        super().__init__(workdir)
+
+        self.distribution = get_distribution_from_workdir(str(self.workdir))
+
+    def find_entry_point_file(self) -> Path:
+        if egg_info_dir := find_egg_info_dir():
+            return Path(egg_info_dir, "entry_points.txt")
+        raise FileNotFoundError("No .egg-info directory found. Have you run `python -m plux entrypoints`?")
+
+    def find_plux_index_file(self) -> Path:
+        if self.config.entrypoint_build_mode == EntrypointBuildMode.MANUAL:
+            return self.workdir / self.config.entrypoint_static_file
+
+        return Path(get_plux_json_path(self.distribution))
+
+    def create_plugin_index_builder(self) -> PluginIndexBuilder:
+        return create_plugin_index_builder(self.config, self.distribution)
+
+    def create_package_finder(self) -> PackageFinder:
+        exclude = [_path_to_module(item) for item in self.config.exclude]
+        include = [_path_to_module(item) for item in self.config.include]
+        return DistributionPackageFinder(self.distribution, exclude=exclude, include=include)
+
+    def build_entrypoints(self):
+        dist = self.distribution
+
+        dist.command_options["plugins"] = {
+            "exclude": ("command line", ",".join(self.config.exclude) or None),
+            "include": ("command line", ",".join(self.config.include) or None),
+        }
+        dist.run_command("plugins")
+
+        print(f"building {dist.get_name().replace('-', '_')}.egg-info...")
+        dist.run_command("egg_info")
+
+        print("discovered plugins:")
+        # print discovered plux plugins
+        with open(get_plux_json_path(dist)) as fd:
+            plux_json = json.load(fd)
+            json.dump(plux_json, sys.stdout, indent=2)
+
+
 def get_plux_json_path(distribution: setuptools.Distribution) -> str:
     """
     Returns the full path of ``plux.json`` file for the given distribution. The file is located within the .egg-info
@@ -345,7 +391,6 @@ def update_entrypoints(distribution: setuptools.Distribution, ep: EntryPointDict
 def create_plugin_index_builder(
     cfg: config.PluxConfiguration,
     distribution: setuptools.Distribution,
-    output_format: t.Literal["json", "ini"] = "json",
 ) -> PluginIndexBuilder:
     """
     Creates a PluginIndexBuilder instance for discovering plugins from a setuptools distribution. It uses a
@@ -357,8 +402,7 @@ def create_plugin_index_builder(
     plugin_finder = PluginFromPackageFinder(
         DistributionPackageFinder(distribution, exclude=exclude, include=include)
     )
-
-    return PluginIndexBuilder(plugin_finder, output_format)
+    return PluginIndexBuilder(plugin_finder)
 
 
 def entry_points_from_egg_info(egg_info_dir: str) -> EntryPointDict:
@@ -517,20 +561,7 @@ class _MatchAllFilter(_Filter):
         return True
 
 
-class _PackageFinder:
-    """
-    Generate a list of Python packages. How these are generated depends on the implementation.
-    """
-
-    def find_packages(self) -> t.Iterable[str]:
-        raise NotImplementedError
-
-    @property
-    def path(self) -> str:
-        raise NotImplementedError
-
-
-class DistributionPackageFinder(_PackageFinder):
+class DistributionPackageFinder(PackageFinder):
     """
     PackageFinder that returns the packages found in the distribution. The Distribution will already have a
     list of resolved packages depending on the setup config. For example, if a ``pyproject.toml`` is used,
@@ -554,6 +585,10 @@ class DistributionPackageFinder(_PackageFinder):
         self.include = _Filter(include) if include else _MatchAllFilter()
 
     def find_packages(self) -> t.Iterable[str]:
+        if self.distribution.packages is None:
+            raise ValueError(
+                "No packages found in setuptools distribution. Is your project configured correctly?"
+            )
         return self.filter_packages(self.distribution.packages)
 
     @property
@@ -572,7 +607,11 @@ class DistributionPackageFinder(_PackageFinder):
         return [item for item in packages if not self.exclude(item) and self.include(item)]
 
 
-class DefaultPackageFinder(_PackageFinder):
+class SetuptoolsPackageFinder(PackageFinder):
+    """
+    Uses setuptools internals to resolve packages.
+    """
+
     def __init__(self, where=".", exclude=(), include=("*",), namespace=True) -> None:
         self.where = where
         self.exclude = exclude
@@ -590,39 +629,6 @@ class DefaultPackageFinder(_PackageFinder):
         return self.where
 
 
-class PluginFromPackageFinder(PluginFinder):
-    finder: _PackageFinder
-
-    def __init__(self, finder: _PackageFinder):
-        self.finder = finder
-
-    def find_plugins(self) -> list[PluginSpec]:
-        collector = ModuleScanningPluginFinder(self.load_modules())
-        return collector.find_plugins()
-
-    def load_modules(self):
-        for module_name in self.list_module_names():
-            try:
-                yield importlib.import_module(module_name)
-            except Exception as e:
-                LOG.error("error importing module %s: %s", module_name, e)
-
-    def list_module_names(self):
-        # adapted from https://stackoverflow.com/a/54323162/804840
-        from pkgutil import iter_modules
-
-        modules = set()
-
-        for pkg in self.finder.find_packages():
-            modules.add(pkg)
-            pkgpath = self.finder.path + os.sep + pkg.replace(".", os.sep)
-            for info in iter_modules([pkgpath]):
-                if not info.ispkg:
-                    modules.add(pkg + "." + info.name)
-
-        return modules
-
-
 class PackagePathPluginFinder(PluginFromPackageFinder):
     """
     Uses setuptools and pkgutil to find and import modules within a given path and then uses a
@@ -631,4 +637,4 @@ class PackagePathPluginFinder(PluginFromPackageFinder):
     """
 
     def __init__(self, where=".", exclude=(), include=("*",), namespace=True) -> None:
-        super().__init__(DefaultPackageFinder(where, exclude, include, namespace=namespace))
+        super().__init__(SetuptoolsPackageFinder(where, exclude, include, namespace=namespace))

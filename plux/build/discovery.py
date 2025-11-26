@@ -1,22 +1,107 @@
 """
-Buildtool independent utils to discover plugins from the codebase, and write index files.
+Buildtool independent utils to discover plugins from the project's source code.
 """
 
-import configparser
+import importlib
 import inspect
-import json
 import logging
-import sys
 import typing as t
 from types import ModuleType
+import os
+import pkgutil
 
 from plux import PluginFinder, PluginSpecResolver, PluginSpec
-from plux.core.entrypoint import discover_entry_points, EntryPointDict
-
-if t.TYPE_CHECKING:
-    from _typeshed import SupportsWrite
 
 LOG = logging.getLogger(__name__)
+
+
+class PackageFinder:
+    """
+    Generate a list of Python packages. How these are generated depends on the implementation.
+
+    Why this abstraction? The naive way to find packages is to list all directories with an ``__init__.py`` file.
+    However, this approach does not work for distributions that have namespace packages. How do we know whether
+    something is a namespace package or just a directory? Typically, the build configuration will tell us. For example,
+    setuptools has the following directives for ``pyproject.toml``::
+
+        [tool.setuptools]
+        packages = ["mypkg", "mypkg.subpkg1", "mypkg.subpkg2"]
+
+    Or in hatch::
+
+        [tool.hatch.build.targets.wheel]
+        packages = ["src/foo"]
+
+    So this abstraction allows us to use the build tool internals to generate a list of packages that we should be
+    scanning for plugins.
+    """
+
+    def find_packages(self) -> t.Iterable[str]:
+        """
+        Returns an Iterable of Python packages. Each item is a string-representation of a Python package (for example,
+        ``plux.core``, ``myproject.mypackage.utils``, ...)
+
+        :return: An Iterable of Packages
+        """
+        raise NotImplementedError
+
+    @property
+    def path(self) -> str:
+        """
+        The root file path under which the packages are located.
+
+        :return: A file path
+        """
+        raise NotImplementedError
+
+
+class PluginFromPackageFinder(PluginFinder):
+    """
+    Finds Plugins from packages that are resolved by the given ``PackageFinder``. Under the hood this uses a
+    ``ModuleScanningPluginFinder``, which, for each package returned by the ``PackageFinder``, imports the package using
+    ``importlib``, and scans the module for plugins.
+    """
+
+    finder: PackageFinder
+
+    def __init__(self, finder: PackageFinder):
+        self.finder = finder
+
+    def find_plugins(self) -> list[PluginSpec]:
+        collector = ModuleScanningPluginFinder(self._load_modules())
+        return collector.find_plugins()
+
+    def _load_modules(self) -> t.Generator[ModuleType, None, None]:
+        """
+        Generator to load all imported modules that are part of the packages returned by the ``PackageFinder``.
+
+        :return: A generator of python modules
+        """
+        for module_name in self._list_module_names():
+            try:
+                yield importlib.import_module(module_name)
+            except Exception as e:
+                LOG.error("error importing module %s: %s", module_name, e)
+
+    def _list_module_names(self) -> set[str]:
+        """
+        This method creates a set of module names by iterating over the packages detected by the ``PackageFinder``. It
+        includes top-level packages, as well as submodules found within those packages.
+
+        :return: A set of strings where each string represents a module name.
+        """
+        # adapted from https://stackoverflow.com/a/54323162/804840
+
+        modules = set()
+
+        for pkg in self.finder.find_packages():
+            modules.add(pkg)
+            pkgpath = self.finder.path.rstrip(os.sep) + os.sep + pkg.replace(".", os.sep)
+            for info in pkgutil.iter_modules([pkgpath]):
+                if not info.ispkg:
+                    modules.add(pkg + "." + info.name)
+
+        return modules
 
 
 class ModuleScanningPluginFinder(PluginFinder):
@@ -49,74 +134,3 @@ class ModuleScanningPluginFinder(PluginFinder):
                         pass
 
         return plugins
-
-
-class PluginIndexBuilder:
-    """
-    Builds an index file containing all discovered plugins. The index file can be written to stdout, or to a file.
-    The writer supports two formats: json and ini.
-    """
-
-    def __init__(
-        self,
-        plugin_finder: PluginFinder,
-        output_format: t.Literal["json", "ini"] = "json",
-    ):
-        self.plugin_finder = plugin_finder
-        self.output_format = output_format
-
-    def write(self, fp: "SupportsWrite[str]" = sys.stdout) -> EntryPointDict:
-        """
-        Discover entry points using the configured ``PluginFinder``, and write the entry points into a file.
-
-        :param fp: The file-like object to write to.
-        :return: The discovered entry points that were written into the file.
-        """
-        ep = discover_entry_points(self.plugin_finder)
-
-        # sort entrypoints alphabetically in each group first
-        for group in ep:
-            ep[group].sort()
-
-        if self.output_format == "json":
-            json.dump(ep, fp, sort_keys=True, indent=2)
-        elif self.output_format == "ini":
-            cfg = configparser.ConfigParser()
-            cfg.read_dict(self.convert_to_nested_entry_point_dict(ep))
-            cfg.write(fp)
-        else:
-            raise ValueError(f"unknown plugin index output format {self.output_format}")
-
-        return ep
-
-    @staticmethod
-    def convert_to_nested_entry_point_dict(ep: EntryPointDict) -> dict[str, dict[str, str]]:
-        """
-        Converts and ``EntryPointDict`` to a nested dict, where the keys are the section names and values are
-        dictionaries. Each dictionary maps entry point names to their values. It also sorts the output alphabetically.
-
-        Example:
-            Input EntryPointDict:
-            {
-                'console_scripts': ['app=module:main', 'tool=module:cli'],
-                'plux.plugins': ['plugin1=pkg.module:Plugin1']
-            }
-
-            Output nested dict:
-            {
-                'console_scripts': {
-                    'app': 'module:main',
-                    'tool': 'module:cli'
-                },
-                'plux.plugins': {
-                    'plugin1': 'pkg.module:Plugin1'
-                }
-            }
-        """
-        result = {}
-        for section_name in sorted(ep.keys()):
-            result[section_name] = {}
-            for entry_point in sorted(ep[section_name]):
-                name, value = entry_point.split("=")
-                result[section_name][name] = value
-        return result
