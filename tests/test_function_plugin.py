@@ -1,7 +1,6 @@
 import pytest
 
-from plugin import PluginManager
-from plux import PluginDisabled
+from plux import PluginDisabled, PluginManager
 from tests.plugins import sample_plugins
 
 

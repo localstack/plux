@@ -1,5 +1,5 @@
-from plugin import PluginSpec
-from plugin.metadata import resolve_distribution_information
+from plux import PluginSpec
+from plux.runtime.metadata import resolve_distribution_information
 
 
 def test_resolve_distribution_information():

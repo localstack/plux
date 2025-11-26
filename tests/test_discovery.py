@@ -1,6 +1,7 @@
 import os
 
-from plugin.discovery import ModuleScanningPluginFinder, PackagePathPluginFinder
+from plux.build.discovery import ModuleScanningPluginFinder
+from plux.build.setuptools import PackagePathPluginFinder
 
 from .plugins import sample_plugins
 

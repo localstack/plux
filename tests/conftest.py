@@ -1,6 +1,6 @@
 import pytest
 
-from plugin.discovery import ModuleScanningPluginFinder
+from plux.build.discovery import ModuleScanningPluginFinder
 from tests.plugins import sample_plugins
 
 

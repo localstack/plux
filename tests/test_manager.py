@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from plugin import Plugin, PluginDisabled, PluginFinder, PluginManager, PluginSpec
+from plux import Plugin, PluginDisabled, PluginFinder, PluginManager, PluginSpec
 from plux.runtime.filter import global_plugin_filter
 
 
