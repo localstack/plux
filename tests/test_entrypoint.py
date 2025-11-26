@@ -1,7 +1,7 @@
 import pytest
 
-from plugin.core import PluginSpec
-from plugin.entrypoint import EntryPoint, spec_to_entry_point, to_entry_point_dict
+from plux import PluginSpec
+from plux.core.entrypoint import EntryPoint, spec_to_entry_point, to_entry_point_dict
 
 from .plugins import sample_plugins
 

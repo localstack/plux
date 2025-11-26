@@ -91,7 +91,7 @@ class PluginSpec:
 class PluginFinder(abc.ABC):
     """
     Basic abstractions to find plugins, either at build time (e.g., using the PackagePathPluginFinder) or at run time
-    (e.g., using StevedorePluginFinder that finds plugins from entrypoints)
+    (e.g., using ``MetadataPluginFinder`` that finds plugins from entrypoints)
     """
 
     def find_plugins(self) -> list[PluginSpec]:

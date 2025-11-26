@@ -200,7 +200,7 @@ with the `@plugin` decorator, you can expose functions as plugins. They will be 
 into `FunctionPlugin` instances, which satisfy both the contract of a Plugin, and that of the function.
 
 ```python
-from plugin import plugin
+from plux import plugin
 
 @plugin(namespace="localstack.configurators")
 def configure_logging(runtime):
