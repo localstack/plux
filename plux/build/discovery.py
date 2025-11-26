@@ -6,6 +6,7 @@ import importlib
 import inspect
 import logging
 import typing as t
+from fnmatch import fnmatchcase
 from types import ModuleType
 import os
 import pkgutil
@@ -134,3 +135,29 @@ class ModuleScanningPluginFinder(PluginFinder):
                         pass
 
         return plugins
+
+
+class Filter:
+    """
+    Given a list of patterns, create a callable that will be true only if
+    the input matches at least one of the patterns.
+    This is from `setuptools.discovery._Filter`
+    """
+
+    def __init__(self, patterns: t.Iterable[str]):
+        self._patterns = patterns
+
+    def __call__(self, item: str):
+        return any(fnmatchcase(item, pat) for pat in self._patterns)
+
+
+class MatchAllFilter(Filter):
+    """
+    Filter that is equivalent to ``_Filter(["*"])``.
+    """
+
+    def __init__(self):
+        super().__init__([])
+
+    def __call__(self, item: str):
+        return True

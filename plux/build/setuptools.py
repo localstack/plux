@@ -9,7 +9,6 @@ import re
 import shutil
 import sys
 import typing as t
-from fnmatch import fnmatchcase
 from pathlib import Path
 
 import setuptools
@@ -36,7 +35,7 @@ from setuptools.command.egg_info import InfoCommon, write_entries
 
 from plux.core.entrypoint import EntryPointDict, discover_entry_points
 from plux.runtime.metadata import entry_points_from_metadata_path
-from plux.build.discovery import PluginFromPackageFinder, PackageFinder
+from plux.build.discovery import PluginFromPackageFinder, PackageFinder, Filter, MatchAllFilter
 from plux.build.index import PluginIndexBuilder
 
 LOG = logging.getLogger(__name__)
@@ -535,32 +534,6 @@ def _path_to_module(path):
     return ".".join(Path(path).with_suffix("").parts)
 
 
-class _Filter:
-    """
-    Given a list of patterns, create a callable that will be true only if
-    the input matches at least one of the patterns.
-    This is from `setuptools.discovery._Filter`
-    """
-
-    def __init__(self, patterns: t.Iterable[str]):
-        self._patterns = patterns
-
-    def __call__(self, item: str):
-        return any(fnmatchcase(item, pat) for pat in self._patterns)
-
-
-class _MatchAllFilter(_Filter):
-    """
-    Filter that is equivalent to ``_Filter(["*"])``.
-    """
-
-    def __init__(self):
-        super().__init__([])
-
-    def __call__(self, item: str):
-        return True
-
-
 class DistributionPackageFinder(PackageFinder):
     """
     PackageFinder that returns the packages found in the distribution. The Distribution will already have a
@@ -581,8 +554,8 @@ class DistributionPackageFinder(PackageFinder):
         include: t.Iterable[str] | None = None,
     ):
         self.distribution = distribution
-        self.exclude = _Filter(exclude or [])
-        self.include = _Filter(include) if include else _MatchAllFilter()
+        self.exclude = Filter(exclude or [])
+        self.include = Filter(include) if include else MatchAllFilter()
 
     def find_packages(self) -> t.Iterable[str]:
         if self.distribution.packages is None:
