@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling", "wheel"]
+build-backend = "hatchling.build"
+
+[project]
+name = "test-project"
+authors = [
+    { name = "LocalStack Contributors", email = "info@localstack.cloud" }
+]
+version = "0.1.0"
+description = "A test project to test plux with pyproject.toml projects and manual build mode"
+dependencies = [
+    "plux",
+    "build",
+]
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = [
+    "entry-points",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["test_project"]
+
+[tool.hatch.dynamic]
+entry-points = { file = ["plux.ini"] }
+
+[tool.plux]
+entrypoint_build_mode = "manual"

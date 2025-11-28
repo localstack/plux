@@ -16,6 +16,7 @@ LOG = logging.getLogger(__name__)
 
 def _get_build_backend() -> str | None:
     # TODO: should read this from the project configuration instead somehow.
+    return "hatchling"
     try:
         import setuptools  # noqa
 
@@ -45,7 +46,9 @@ def _load_project(args: argparse.Namespace) -> Project:
 
         return SetuptoolsProject(workdir)
     elif backend == "hatchling":
-        raise NotImplementedError("Hatchling is not yet supported as build backend")
+        from plux.build.hatchling import HatchlingProject
+
+        return HatchlingProject(workdir)
     else:
         raise RuntimeError(
             "No supported build backend found. Plux needs either setuptools or hatchling to work."
