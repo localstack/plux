@@ -85,6 +85,8 @@ class SimplePackageFinder(PackageFinder):
     everything in the preceding path that's not a package.
     """
 
+    DEFAULT_EXCLUDES = "__pycache__"
+
     def __init__(self, path: str):
         self._path = path
 
@@ -129,6 +131,10 @@ class SimplePackageFinder(PackageFinder):
             if rel_path == ".":
                 # If we're at the root and it's a package, use the directory name
                 rel_path = os.path.basename(abs_path)
+
+            # skip excludes TODO: should re-use Filter API
+            if os.path.basename(rel_path).strip(os.pathsep) in self.DEFAULT_EXCLUDES:
+                continue
 
             # Skip invalid package names (those containing dots in the path)
             if "." in os.path.basename(rel_path):
