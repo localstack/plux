@@ -135,3 +135,6 @@ venv.bak/
 
 # don't ignore build package
 !plux/build
+!tests/build
+
+plux.ini
