@@ -6,9 +6,19 @@ from .plugin import PluginFinder, PluginSpec
 
 
 class EntryPoint(t.NamedTuple):
+    """
+    Lightweight data structure to represent an entry point. You can find out more about the data model here:
+    https://packaging.python.org/en/latest/specifications/entry-points/#data-model
+    """
+
     name: str
+    """The name identifies this entry point within its group. The precise meaning of this is up to the consumer.
+    Within a group, entry point names should be unique."""
     value: str
+    """The object reference points to a Python object. It is either in the form ``importable.module``, or
+    importable.module:object.attr."""
     group: str
+    """The group that an entry point belongs to indicates what sort of object it provides."""
 
 
 EntryPointDict = dict[str, list[str]]

@@ -16,8 +16,12 @@ from plux.core.plugin import PluginSpec
 Distribution = metadata.Distribution
 
 
-def metadata_packages_distributions():
-    """Wrapper around ``importlib.metadata.packages_distributions``, which returns a mapping of top-level packages."""
+def metadata_packages_distributions() -> t.Mapping[str, list[str]]:
+    """
+    Wrapper around ``importlib.metadata.packages_distributions``, which returns a mapping of top-level packages.
+
+    :return: A mapping of top-level packages to their distributions.
+    """
     return metadata.packages_distributions()
 
 
@@ -33,7 +37,7 @@ def packages_distributions() -> t.Mapping[str, list[str]]:
     in the site-packages directory created by the editable install. Therefore, a distribution name may
     appear twice for the same package, which is unhelpful information, so we deduplicate it here.
 
-    :return: package to distribution mapping
+    :return: A mapping of packages to their distributions.
     """
     distributions = dict(metadata_packages_distributions())
 
@@ -50,8 +54,8 @@ def resolve_distribution_information(plugin_spec: PluginSpec) -> Distribution | 
     error for plugins that come from a namespace package (i.e., when a package is part of multiple
     distributions).
 
-    :param plugin_spec: the plugin spec to resolve
-    :return: the Distribution metadata if it exists
+    :param plugin_spec: The plugin spec to resolve
+    :return: The Distribution metadata if it exists
     """
     package = inspect.getmodule(plugin_spec.factory).__name__
     root_package = package.split(".")[0]
@@ -76,10 +80,11 @@ def resolve_entry_points(
     distributions: t.Iterable[Distribution] = None,
 ) -> list[metadata.EntryPoint]:
     """
-    Resolves all entry points using a combination of ``importlib.metadata``, and also follows entry points
-    links in ``entry_points_editable.txt`` created by plux while building editable wheels.
+    Resolves all entry points in the given distributions using a combination of ``importlib.metadata``, and also
+    follows entry points links in ``entry_points_editable.txt`` created by plux while building editable wheels.
+    If no distributions are given, all distributions from ``importlib.metadata.distributions()`` are used.
 
-    :return: the list of unique entry points
+    :return: The list of unique entry points
     """
     entry_points = []
     distributions = distributions or metadata.distributions()
@@ -114,10 +119,11 @@ def build_entry_point_index(
 ) -> dict[str, list[metadata.EntryPoint]]:
     """
     Organizes the given list of entry points into a dictionary that maps entry point groups to their
-    respective entry points, which resembles the data structure of an ``entry_points.txt``.
+    respective entry points, which resembles the data structure of an ``entry_points.txt``. Using, for example,
+    ``index["distutils.commands"]`` you then get a list of entry points in that group.
 
-    :param entry_points:
-    :return:
+    :param entry_points: A list of entry points.
+    :return: A mapping of groups to a list of entrypoints in their group.
     """
     result = collections.defaultdict(list)
     names = collections.defaultdict(set)  # book-keeping to check duplicates
@@ -133,8 +139,8 @@ def parse_entry_points_text(text: str) -> list[metadata.EntryPoint]:
     """
     Parses the content of an ``entry_points.txt`` into a list of entry point objects.
 
-    :param text: the string to parse
-    :return: a list of metadata EntryPoint objects
+    :param text: The string to parse
+    :return: A list of metadata EntryPoint objects
     """
     return metadata.EntryPoints._from_text(text)
 
@@ -151,8 +157,8 @@ def serialize_entry_points_text(index: dict[str, list[metadata.EntryPoint]]) -> 
         bdist_egg = setuptools.command.bdist_egg:bdist_egg
 
 
-    :param index: the index to serialize
-    :return: the serialized string
+    :param index: The index to serialize
+    :return: The serialized string
     """
 
     buffer = io.StringIO()

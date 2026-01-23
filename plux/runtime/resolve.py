@@ -15,7 +15,7 @@ LOG = logging.getLogger(__name__)
 
 class MetadataPluginFinder(PluginFinder):
     """
-    This is a simple implementation of a PluginFinder that uses by default the ``EntryPointsCache`` singleton.
+    This is a simple implementation of a ``PluginFinder`` that uses by default the ``EntryPointsCache`` singleton.
     """
 
     def __init__(
@@ -40,9 +40,11 @@ class MetadataPluginFinder(PluginFinder):
                 specs.append(spec)
         return specs
 
-    def to_plugin_spec(self, entry_point: EntryPoint) -> PluginSpec:
+    def to_plugin_spec(self, entry_point: EntryPoint) -> PluginSpec | None:
         """
-        Convert a stevedore extension into a PluginSpec by using a spec_resolver.
+        Convert an importlib ``EntryPoint`` into a PluginSpec by using the ``spec_resolver``. It does this by first
+        loading the entry point, which returns the named object referenced by the entry point, and then passes that
+        to the ``PluginSpecResolver`` instance.
         """
         try:
             source = entry_point.load()
@@ -53,3 +55,5 @@ class MetadataPluginFinder(PluginFinder):
 
             if self.on_resolve_exception_callback:
                 self.on_resolve_exception_callback(self.namespace, entry_point, e)
+
+        return None
