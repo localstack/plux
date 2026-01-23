@@ -13,7 +13,7 @@ class PluginFilter(t.Protocol):
         """
         Returns True if the plugin should be filtered (disabled), or False otherwise.
 
-        :param spec: the spec to check
+        :param spec: The spec to check
         :return: True if the plugin should be disabled
         """
         ...

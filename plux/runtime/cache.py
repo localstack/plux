@@ -1,3 +1,5 @@
+"""Internal tool to optimize access to entry points that are available in the current sys path."""
+
 import errno
 import glob
 import hashlib
@@ -20,9 +22,10 @@ from .metadata import (
 
 def get_user_cache_dir() -> Path:
     """
-    Returns the path of the user's cache dir (e.g., ~/.cache on Linux, or ~/Library/Caches on Mac).
+    Returns the path of the user's cache dir. This is ``~/.cache`` on Linux, ``~/Library/Caches`` on Mac, or
+    ``\\Users\\{UserName}\\AppData\\Local`` on Windows.
 
-    :return: a Path pointing to the platform-specific cache dir of the user
+    :return: A Path pointing to the platform-specific cache dir of the user.
     """
 
     if "windows" == platform.system().lower():
@@ -39,6 +42,13 @@ def get_user_cache_dir() -> Path:
 
 
 def _get_mtime(path: str) -> float:
+    """
+    Utility to get the mtime of a file or directory. Mtime is the time of the most recent content modification
+    expressed in seconds. Returns -1.0 if the file does not exist.
+
+    :param path: The file path to check
+    :return: The mtime of the file or -1.0 if the file does not exist.
+    """
     try:
         s = os.stat(path)
         return s.st_mtime
@@ -49,15 +59,25 @@ def _get_mtime(path: str) -> float:
 
 
 def _float_to_bytes(f: float) -> bytes:
+    """
+    Utility to convert a float into a byte object.
+
+    :param f: The float value to convert.
+    :return: A byte object containing the value f according to the format "f".
+    """
     return struct.Struct("f").pack(f)
 
 
 class EntryPointsCache(EntryPointsResolver):
     """
     Special ``EntryPointsResolver`` that uses ``importlib.metadata`` and a file system cache. The basic and
-    hash key calculation idea is taken from stevedore, but entry point parsing/serializing is simplified
-    slightly. Instead of writing json files, that includes metadata, we instead write one giant
-    ``entry_points.txt`` compatible file.
+    hash key calculation idea is taken from stevedore (see
+    https://github.com/openstack/stevedore/blob/master/stevedore/_cache.py), but entry point parsing/serializing is
+    simplified slightly. Instead of writing json files that include metadata, we instead write one giant
+    ``entry_points.txt`` compatible ini file.
+
+    The cache is stored a ``plux/`` directory in the user's cache dir (e.g., ``~/.cache/plux`` on Linux, or
+    ``~/Library/Caches/plux`` on Mac)
 
     You can get a singleton instance via ``EntryPointsCache.instance()`` that also keeps an in-memory cache
     for the current ``sys.path``.
@@ -77,7 +97,10 @@ class EntryPointsCache(EntryPointsResolver):
 
     def get_entry_points(self) -> dict[str, list[metadata.EntryPoint]]:
         """
-        Returns a dictionary of entry points for the current ``sys.path``.
+        Returns a dictionary of entry points for the current ``sys.path``. The first time the method is invoked,
+        the entrypoint index is created and then cached in-memory for faster subsequent access.
+
+        :return:  The dictionary that maps entrypoint group names to a list of entry points.
         """
         path = sys.path
         key = tuple(path)
@@ -118,7 +141,7 @@ class EntryPointsCache(EntryPointsResolver):
 
     def _calculate_hash_key(self, path: list[str]):
         """
-        Calculates a hash of all modified times of all ``entry_point.txt`` files in the path. Basic idea
+        Calculates a hash of all modified times of all ``entry_point.txt`` files in the path. The basic idea was
         taken from ``stevedore._cache._hash_settings_for_path``. The main difference to it is that it also
         considers entry points files linked through ``entry_points_editable.txt``.
 
@@ -129,8 +152,8 @@ class EntryPointsCache(EntryPointsResolver):
         * mtimes of all entry_point.txt files within the path
         * mtimes of all entry_point.txt files linked through entry_points_editable.txt files
 
-        :param path: the path (typically ``sys.path``)
-        :return: a sha256 hash that hashes the path's entry point state
+        :param path: The path (typically ``sys.path``)
+        :return: A sha256 hash that hashes the path's entry point state
         """
         h = hashlib.sha256()
 
@@ -156,7 +179,7 @@ class EntryPointsCache(EntryPointsResolver):
         An iterator that returns all entry_point.txt file paths in the given path entry. It transparently
         resolves editable entry points links.
 
-        :param entry: a path entry like ``/home/user/myproject/.venv/lib/python3.11/site-packages``
+        :param entry: A path entry like ``/home/user/myproject/.venv/lib/python3.11/site-packages``
         """
         yield from glob.iglob(os.path.join(entry, "*.dist-info", "entry_points.txt"))
         yield from glob.iglob(os.path.join(entry, "*.egg-info", "entry_points.txt"))
@@ -170,6 +193,11 @@ class EntryPointsCache(EntryPointsResolver):
 
     @staticmethod
     def instance() -> "EntryPointsCache":
+        """
+        Returns the singleton instance of the cache. If the instance does not exist yet, it is created.
+
+        :return: A global ``EntryPointsCache`` instance.
+        """
         if EntryPointsCache._instance:
             return EntryPointsCache._instance
 
