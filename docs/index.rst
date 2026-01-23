@@ -3,15 +3,39 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Plux documentation
-==================
+Plux - Dynamic Code Loading Framework
+=====================================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+Plux is the dynamic code loading framework used in `LocalStack <https://github.com/localstack/localstack>`_. It builds a higher-level plugin mechanism around `Python's entry point mechanism <https://packaging.python.org/specifications/entry-points/>`_.
 
+Plux provides tools to load plugins from entry points at run time, and to discover entry points from plugins at build time (so you don't have to declare entry points statically in your ``setup.cfg`` or ``pyproject.toml``).
+
+.. image:: plux-architecture.png
+   :alt: Plux Architecture
+   :align: center
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: User Guide
 
+   user_guide/quickstart
+   user_guide/defining_loading_plugins
+   user_guide/plugin_manager
+   user_guide/filters
+   user_guide/lifecycle_listener
+   user_guide/build_integration
+   user_guide/cli
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Reference
+
+   reference/build_discovery
+   reference/runtime_discovery
+   reference/setuptools_integration
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Tutorials
+
+   tutorials/index
