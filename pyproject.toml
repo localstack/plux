@@ -1,5 +1,5 @@
 [build-system]
-requires = ['hatchling']
+requires = ['hatchling', 'hatch-vcs']
 build-backend = "hatchling.build"
 
 [project]
@@ -35,8 +35,11 @@ dev = [
     "ruff==0.9.1",
 ]
 
+[tool.hatch.build.hooks.vcs]
+version-file = "plux/version.py"
+
 [tool.hatch.version]
-path = "plux/__init__.py"
+source = "vcs"
 
 [tool.ruff]
 line-length = 110
