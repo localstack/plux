@@ -14,10 +14,9 @@ from plux.core.plugin import (
     plugin,
 )
 from plux.runtime.manager import PluginContainer, PluginManager
+from plux.version import __version__
 
 name = "plux"
-
-__version__ = "1.14.0"
 
 __all__ = [
     "FunctionPlugin",
@@ -34,4 +33,5 @@ __all__ = [
     "PluginSpecResolver",
     "PluginType",
     "plugin",
+    "__version__"
 ]
