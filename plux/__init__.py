@@ -33,4 +33,5 @@ __all__ = [
     "PluginSpecResolver",
     "PluginType",
     "plugin",
+    "__version__"
 ]
