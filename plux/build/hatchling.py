@@ -14,6 +14,58 @@ from plux.build.project import Project
 LOG = logging.getLogger(__name__)
 
 
+class HatchlingProject(Project):
+    def __init__(self, workdir: str = None):
+        super().__init__(workdir)
+
+        if self.config.entrypoint_build_mode != EntrypointBuildMode.MANUAL:
+            raise NotImplementedError(
+                "Hatchling integration currently only works with entrypoint_build_mode=manual"
+            )
+
+        # we assume that a wheel will be the source of truth for the packages finally ending up in the distribution.
+        # therefore, we care foremost about the wheel configuration. this also builds on the assumption that building
+        # the wheel from the local sources, and the sdist, will be the same.
+        self.builder = WheelBuilder(workdir)
+
+    @property
+    def hatchling_config(self) -> BuilderConfig:
+        return self.builder.config
+
+    def create_package_finder(self) -> PackageFinder:
+        return HatchlingPackageFinder(
+            self.hatchling_config,
+            exclude=self.config.exclude,
+            include=self.config.include,
+        )
+
+    def find_plux_index_file(self) -> Path:
+        # TODO: extend as soon as we support EntryPointBuildMode = build-hook
+        return Path(self.hatchling_config.root, self.config.entrypoint_static_file)
+
+    def find_entry_point_file(self) -> Path:
+        # we assume that `pip install -e .` is used, and therefore the entrypoints file used during local execution
+        # will be in the .dist-info metadata directory in the sys path
+        metadata_dir = f"{self.builder.artifact_project_id}.dist-info"
+
+        for path in sys.path:
+            metadata_path = os.path.join(path, metadata_dir)
+            if not os.path.exists(metadata_path):
+                continue
+
+            return Path(metadata_path) / "entry_points.txt"
+
+        raise FileNotFoundError(f"No metadata found for {self.builder.artifact_project_id} in sys path")
+
+    def build_entrypoints(self):
+        # TODO: currently this just replicates the manual build mode.
+        path = os.path.join(os.getcwd(), self.config.entrypoint_static_file)
+        print(f"discovering plugins and writing to {path} ...")
+        builder = self.create_plugin_index_builder()
+        with open(path, "w") as fd:
+            builder.write(fd, output_format="ini")
+
+
 class HatchlingPackageFinder(PackageFinder):
     """
     Uses hatchling's BuilderConfig abstraction to enumerate packages.
@@ -92,55 +144,3 @@ class HatchlingPackageFinder(PackageFinder):
 
     def filter_packages(self, packages: t.Iterable[str]) -> t.Iterable[str]:
         return [item for item in packages if not self.exclude(item) and self.include(item)]
-
-
-class HatchlingProject(Project):
-    def __init__(self, workdir: str = None):
-        super().__init__(workdir)
-
-        if self.config.entrypoint_build_mode != EntrypointBuildMode.MANUAL:
-            raise NotImplementedError(
-                "Hatchling integration currently only works with entrypoint_build_mode=manual"
-            )
-
-        # we assume that a wheel will be the source of truth for the packages finally ending up in the distribution.
-        # therefore we care foremost about the wheel configuration. this also builds on the assumption that building
-        # the wheel from the local sources, and the sdist, will be the same.
-        self.builder = WheelBuilder(workdir)
-
-    @property
-    def hatchling_config(self) -> BuilderConfig:
-        return self.builder.config
-
-    def create_package_finder(self) -> PackageFinder:
-        return HatchlingPackageFinder(
-            self.hatchling_config,
-            exclude=self.config.exclude,
-            include=self.config.include,
-        )
-
-    def find_plux_index_file(self) -> Path:
-        # TODO: extend as soon as we support EntryPointBuildMode = build-hook
-        return Path(self.hatchling_config.root, self.config.entrypoint_static_file)
-
-    def find_entry_point_file(self) -> Path:
-        # we assume that `pip install -e .` is used, and therefore the entrypoints file used during local execution
-        # will be in the .dist-info metadata directory in the sys path
-        metadata_dir = f"{self.builder.artifact_project_id}.dist-info"
-
-        for path in sys.path:
-            metadata_path = os.path.join(path, metadata_dir)
-            if not os.path.exists(metadata_path):
-                continue
-
-            return Path(metadata_path) / "entry_points.txt"
-
-        raise FileNotFoundError(f"No metadata found for {self.builder.artifact_project_id} in sys path")
-
-    def build_entrypoints(self):
-        # TODO: currently this just replicates the manual build mode.
-        path = os.path.join(os.getcwd(), self.config.entrypoint_static_file)
-        print(f"discovering plugins and writing to {path} ...")
-        builder = self.create_plugin_index_builder()
-        with open(path, "w") as fd:
-            builder.write(fd, output_format="ini")
