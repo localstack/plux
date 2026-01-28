@@ -15,8 +15,11 @@ LOG = logging.getLogger(__name__)
 
 
 def _get_build_backend() -> str | None:
+    """
+    Returns the name of the build backend to use. Currently, we only support setuptools and hatchling, and we prefer
+    setuptools over hatchling if both are available.
+    """
     # TODO: should read this from the project configuration instead somehow.
-    return "hatchling"
     try:
         import setuptools  # noqa
 

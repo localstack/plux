@@ -11,6 +11,7 @@ version = "0.1.0"
 description = "A test project to test plux with pyproject.toml projects and manual build mode"
 dependencies = [
     "plux",
+    "hatchling",
     "build",
 ]
 requires-python = ">=3.8"
