@@ -59,7 +59,7 @@ class PluxConfiguration:
     entrypoint_static_file: str = "plux.ini"
     """The name of the entrypoint ini file if entrypoint_build_mode is set to MANUAL."""
 
-    bild_backend: BuildBackend = BuildBackend.AUTO
+    build_backend: BuildBackend = BuildBackend.AUTO
     """The build backend to use. If set to ``auto``, the build backend will be detected automatically from the config."""
 
     def merge(
@@ -69,7 +69,7 @@ class PluxConfiguration:
         include: list[str] = None,
         entrypoint_build_mode: EntrypointBuildMode = None,
         entrypoint_static_file: str = None,
-        bild_backend: BuildBackend = None,
+        build_backend: BuildBackend = None,
     ) -> "PluxConfiguration":
         """
         Merges or overwrites the given values into the current configuration and returns a new configuration object.
@@ -85,7 +85,7 @@ class PluxConfiguration:
             entrypoint_static_file=entrypoint_static_file
             if entrypoint_static_file is not None
             else self.entrypoint_static_file,
-            bild_backend=bild_backend if bild_backend is not None else self.bild_backend,
+            build_backend=build_backend if build_backend is not None else self.build_backend,
         )
 
 
@@ -193,9 +193,9 @@ def determine_build_backend_from_config(workdir: str) -> BuildBackend:
     # parse config to get build backend
     plux_config = read_plux_config_from_workdir(workdir)
 
-    if plux_config.bild_backend != BuildBackend.AUTO:
+    if plux_config.build_backend != BuildBackend.AUTO:
         # first, check if the user configured one
-        return plux_config.bild_backend
+        return plux_config.build_backend
 
     # otherwise, try to determine it from the build-backend attribute in the pyproject.toml
     try:
