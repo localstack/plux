@@ -8,6 +8,7 @@ import enum
 import os
 import sys
 from importlib.util import find_spec
+from typing import Any
 
 
 class EntrypointBuildMode(enum.Enum):
@@ -22,6 +23,17 @@ class EntrypointBuildMode(enum.Enum):
 
     MANUAL = "manual"
     BUILD_HOOK = "build-hook"
+
+
+class BuildBackend(enum.Enum):
+    """
+    The build backend integration to use. Currently, we support setuptools and hatchling. If set to ``auto``, there
+    is an algorithm to detect the build backend automatically from the config.
+    """
+
+    AUTO = "auto"
+    SETUPTOOLS = "setuptools"
+    HATCHLING = "hatchling"
 
 
 @dataclasses.dataclass
@@ -47,6 +59,9 @@ class PluxConfiguration:
     entrypoint_static_file: str = "plux.ini"
     """The name of the entrypoint ini file if entrypoint_build_mode is set to MANUAL."""
 
+    bild_backend: BuildBackend = BuildBackend.AUTO
+    """The build backend to use. If set to ``auto``, the build backend will be detected automatically from the config."""
+
     def merge(
         self,
         path: str = None,
@@ -54,6 +69,7 @@ class PluxConfiguration:
         include: list[str] = None,
         entrypoint_build_mode: EntrypointBuildMode = None,
         entrypoint_static_file: str = None,
+        bild_backend: BuildBackend = None,
     ) -> "PluxConfiguration":
         """
         Merges or overwrites the given values into the current configuration and returns a new configuration object.
@@ -69,6 +85,7 @@ class PluxConfiguration:
             entrypoint_static_file=entrypoint_static_file
             if entrypoint_static_file is not None
             else self.entrypoint_static_file,
+            bild_backend=bild_backend if bild_backend is not None else self.bild_backend,
         )
 
 
@@ -81,8 +98,7 @@ def read_plux_config_from_workdir(workdir: str = None) -> PluxConfiguration:
     :return: A plux configuration object
     """
     try:
-        pyproject_file = os.path.join(workdir or os.getcwd(), "pyproject.toml")
-        return parse_pyproject_toml(pyproject_file)
+        return parse_pyproject_toml(workdir or os.getcwd())
     except FileNotFoundError:
         return PluxConfiguration()
 
@@ -96,18 +112,7 @@ def parse_pyproject_toml(path: str | os.PathLike[str]) -> PluxConfiguration:
     :return: A plux configuration object containing the parsed values.
     :raises FileNotFoundError: If the file does not exist.
     """
-    if find_spec("tomllib"):
-        from tomllib import load as load_toml
-    elif find_spec("tomli"):
-        from tomli import load as load_toml
-    else:
-        raise ImportError("Could not find a TOML parser. Please install either tomllib or tomli.")
-
-    # read the file
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"No pyproject.toml found at {path}")
-    with open(path, "rb") as file:
-        pyproject_config = load_toml(file)
+    pyproject_config = load_pyproject_toml(path)
 
     # find the [tool.plux] section
     tool_table = pyproject_config.get("tool", {})
@@ -127,4 +132,92 @@ def parse_pyproject_toml(path: str | os.PathLike[str]) -> PluxConfiguration:
         # will raise a ValueError exception if the mode is invalid
         kwargs["entrypoint_build_mode"] = EntrypointBuildMode(mode)
 
+    # parse build_backend
+    if build_backend := kwargs.get("build_backend"):
+        # will raise a ValueError exception if the build backend is invalid
+        kwargs["build_backend"] = BuildBackend(build_backend)
+
     return PluxConfiguration(**kwargs)
+
+
+def determine_build_backend_from_pyproject_config(pyproject_config: dict[str, Any]) -> BuildBackend | None:
+    """
+    Determine the build backend to use based on the pyproject.toml configuration.
+    """
+    build_backend = pyproject_config.get("build-system", {}).get("build-backend", "")
+    if build_backend.startswith("setuptools."):
+        return BuildBackend.SETUPTOOLS
+    if build_backend.startswith("hatchling."):
+        return BuildBackend.HATCHLING
+    else:
+        return None
+
+
+def load_pyproject_toml(pyproject_file_or_workdir: str | os.PathLike[str] = None) -> dict[str, Any]:
+    """
+    Loads a pyproject.toml file from the given path or the current working directory. Uses tomli or tomllib to parse.
+
+    :param pyproject_file_or_workdir: Path to the pyproject.toml file or the directory containing it. Defaults to the current working directory.
+    :return: The parsed pyproject.toml file as a dictionary.
+    """
+    if pyproject_file_or_workdir is None:
+        pyproject_file_or_workdir = os.getcwd()
+    if os.path.isfile(pyproject_file_or_workdir):
+        pyproject_file = pyproject_file_or_workdir
+    else:
+        pyproject_file = os.path.join(pyproject_file_or_workdir, "pyproject.toml")
+
+    if find_spec("tomllib"):
+        from tomllib import load as load_toml
+    elif find_spec("tomli"):
+        from tomli import load as load_toml
+    else:
+        raise ImportError("Could not find a TOML parser. Please install either tomllib or tomli.")
+
+    # read the file
+    if not os.path.exists(pyproject_file):
+        raise FileNotFoundError(f"No .toml file found at {pyproject_file}")
+    with open(pyproject_file, "rb") as file:
+        pyproject_config = load_toml(file)
+
+    return pyproject_config
+
+
+def determine_build_backend_from_config(workdir: str) -> BuildBackend:
+    """
+    Algorithm to determine the build backend to use based on the given workdir. First, it checks the pyproject.toml to
+    see whether there's a [tool.plux] build_backend =... is configured directly. If not found, it checks the
+    ``build-backend`` attribute in the pyproject.toml. Then, as a fallback, it tries to import both setuptools and
+    hatchling, and uses the first one that works
+    """
+    # parse config to get build backend
+    plux_config = read_plux_config_from_workdir(workdir)
+
+    if plux_config.bild_backend != BuildBackend.AUTO:
+        # first, check if the user configured one
+        return plux_config.bild_backend
+
+    # otherwise, try to determine it from the build-backend attribute in the pyproject.toml
+    try:
+        backend = determine_build_backend_from_pyproject_config(load_pyproject_toml(workdir))
+        if backend is not None:
+            return backend
+    except FileNotFoundError:
+        pass
+
+    # if that also fails, just try to import both build backends and return the first one that works
+    try:
+        import setuptools  # noqa
+
+        return BuildBackend.SETUPTOOLS
+    except ImportError:
+        pass
+
+    try:
+        import hatchling  # noqa
+
+        return BuildBackend.HATCHLING
+    except ImportError:
+        pass
+
+    raise ValueError("No supported build backend found. Plux needs either setuptools or hatchling to work.")

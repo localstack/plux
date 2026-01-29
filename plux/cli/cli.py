@@ -14,41 +14,20 @@ from plux.build.project import Project
 LOG = logging.getLogger(__name__)
 
 
-def _get_build_backend() -> str | None:
-    """
-    Returns the name of the build backend to use. Currently, we only support setuptools and hatchling, and we prefer
-    setuptools over hatchling if both are available.
-    """
-    # TODO: should read this from the project configuration instead somehow.
-    try:
-        import setuptools  # noqa
-
-        return "setuptools"
-    except ImportError:
-        pass
-
-    try:
-        import hatchling  # noqa
-
-        return "hatchling"
-    except ImportError:
-        pass
-
-    return None
-
-
 def _load_project(args: argparse.Namespace) -> Project:
-    backend = _get_build_backend()
     workdir = args.workdir
 
     if args.verbose:
-        print(f"loading project config from {workdir}, determined build backend is: {backend}")
+        print(f"loading project config from {workdir}")
 
-    if backend == "setuptools":
+    # TODO: this is maybe a bit redundant since we parse the config once here, and then again when we create the Project
+    backend = config.determine_build_backend_from_config(workdir)
+
+    if backend == config.BuildBackend.SETUPTOOLS:
         from plux.build.setuptools import SetuptoolsProject
 
         return SetuptoolsProject(workdir)
-    elif backend == "hatchling":
+    elif backend == config.BuildBackend.HATCHLING:
         from plux.build.hatchling import HatchlingProject
 
         return HatchlingProject(workdir)
