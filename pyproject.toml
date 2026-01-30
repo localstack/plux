@@ -33,6 +33,7 @@ dev = [
     "setuptools",
     "pytest==8.4.1",
     "ruff==0.9.1",
+    "mypy",
 ]
 
 [tool.hatch.build.hooks.vcs]

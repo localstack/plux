@@ -27,7 +27,7 @@ class PluginDisabled(PluginException):
 
     reason: str
 
-    def __init__(self, namespace: str, name: str, reason: str = None):
+    def __init__(self, namespace: str, name: str, reason: str | None = None):
         message = f"plugin {namespace}:{name} is disabled"
         if reason:
             message = f"{message}, reason: {reason}"
