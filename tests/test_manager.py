@@ -1,5 +1,5 @@
-from typing import Dict, List, Tuple
-from unittest.mock import MagicMock
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -8,13 +8,13 @@ from plux.runtime.filter import global_plugin_filter
 
 
 class DummyPlugin(Plugin):
-    load_calls: List[Tuple[Tuple, Dict]]
+    load_calls: list[tuple[tuple[Any], dict[str, Any]]]
 
     def __init__(self) -> None:
         super().__init__()
         self.load_calls = list()
 
-    def load(self, *args, **kwargs):
+    def load(self, *args: Any, **kwargs: Any) -> None:
         self.load_calls.append((args, kwargs))
 
 
@@ -28,7 +28,7 @@ class GoodPlugin(DummyPlugin):
 
 
 class ThrowsExceptionOnLoadPlugin(DummyPlugin):
-    def load(self, *args, **kwargs):
+    def load(self, *args: Any, **kwargs: Any) -> None:
         super().load(*args, **kwargs)
         raise ValueError("controlled load fail")
 
@@ -40,15 +40,15 @@ class ThrowsExceptionOnInitPlugin(DummyPlugin):
 
 
 class DummyPluginFinder(PluginFinder):
-    def __init__(self, specs: List[PluginSpec]):
+    def __init__(self, specs: list[PluginSpec]):
         self.specs = specs
 
-    def find_plugins(self) -> List[PluginSpec]:
+    def find_plugins(self) -> list[PluginSpec]:
         return self.specs
 
 
 @pytest.fixture
-def dummy_plugin_finder():
+def dummy_plugin_finder() -> DummyPluginFinder:
     return DummyPluginFinder(
         [
             PluginSpec("test.plugins.dummy", "shouldload", GoodPlugin),
@@ -62,8 +62,8 @@ def dummy_plugin_finder():
 
 
 class TestPluginManager:
-    def test_load_all(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_load_all(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         assert manager.is_loaded("shouldload") is False
         assert manager.is_loaded("shouldalsoload") is False
@@ -84,8 +84,8 @@ class TestPluginManager:
         assert type(plugins[0]) is GoodPlugin
         assert type(plugins[1]) is GoodPlugin
 
-    def test_list_names(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_list_names(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
         names = manager.list_names()
 
         assert len(names) == 5
@@ -95,8 +95,8 @@ class TestPluginManager:
         assert "init_errors" in names
         assert "shouldalsoload" in names
 
-    def test_exists(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_exists(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         assert manager.exists("shouldload")
         assert manager.exists("shouldnotload")
@@ -105,7 +105,7 @@ class TestPluginManager:
         assert manager.exists("shouldalsoload")
         assert not manager.exists("foobar")
 
-    def test_load_all_load_is_only_called_once(self):
+    def test_load_all_load_is_only_called_once(self) -> None:
         finder = DummyPluginFinder(
             [
                 PluginSpec("test.plugins.dummy", "shouldload", GoodPlugin),
@@ -113,7 +113,7 @@ class TestPluginManager:
             ]
         )
 
-        manager: PluginManager[DummyPlugin] = PluginManager(
+        manager: PluginManager[DummyPlugin] = PluginManager[DummyPlugin](
             "test.plugins.dummy", finder=finder, load_kwargs={"foo": "bar"}
         )
 
@@ -126,16 +126,16 @@ class TestPluginManager:
         assert len(plugins[0].load_calls) == 1
         assert len(plugins[1].load_calls) == 1
 
-    def test_load_on_non_existing_plugin(self):
-        manager = PluginManager("test.plugins.dummy", finder=DummyPluginFinder([]))
+    def test_load_on_non_existing_plugin(self) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=DummyPluginFinder([]))
 
         with pytest.raises(ValueError) as ex:
             manager.load("foo")
 
         ex.match("no plugin named foo in namespace test.plugins.dummy")
 
-    def test_load_all_container_has_errors(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_load_all_container_has_errors(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         c_shouldload = manager.get_container("shouldload")
         c_shouldnotload = manager.get_container("shouldnotload")
@@ -157,8 +157,8 @@ class TestPluginManager:
         assert type(c_load_errors.load_error) is ValueError
         assert c_shouldalsoload.load_error is None
 
-    def test_load_all_propagate_exception(self):
-        manager = PluginManager(
+    def test_load_all_propagate_exception(self) -> None:
+        manager = PluginManager[DummyPlugin](
             "test.plugins.dummy",
             finder=DummyPluginFinder(
                 [
@@ -172,8 +172,8 @@ class TestPluginManager:
 
         ex.match("controlled load fail")
 
-    def test_load_disabled_plugin(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_load_disabled_plugin(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         with pytest.raises(PluginDisabled) as ex:
             manager.load("shouldnotload")
@@ -181,10 +181,12 @@ class TestPluginManager:
         assert ex.value.namespace == "test.plugins.dummy"
         assert ex.value.name == "shouldnotload"
 
-    def test_lifecycle_listener(self, dummy_plugin_finder):
-        listener = MagicMock()
+    def test_lifecycle_listener(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        listener = Mock()
 
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder, listener=listener)
+        manager = PluginManager[DummyPlugin](
+            "test.plugins.dummy", finder=dummy_plugin_finder, listener=listener
+        )
         manager.load_all()
 
         assert listener.on_init_after.call_count == 4
@@ -196,8 +198,8 @@ class TestPluginManager:
 
 
 class TestGlobalPluginFilter:
-    def test_disable_namespace(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_disable_namespace(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         global_plugin_filter.add_exclusion(namespace="test.plugins.*")
 
@@ -207,8 +209,8 @@ class TestGlobalPluginFilter:
 
         global_plugin_filter.exclusions.clear()
 
-    def test_non_matching_namespace(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_non_matching_namespace(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         global_plugin_filter.add_exclusion(namespace="test.plugins.dummy.*")
 
@@ -217,8 +219,8 @@ class TestGlobalPluginFilter:
         assert manager.is_loaded("shouldalsoload") is True
         global_plugin_filter.exclusions.clear()
 
-    def test_disable_name(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_disable_name(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         global_plugin_filter.add_exclusion(name="*also*")
 
@@ -227,8 +229,8 @@ class TestGlobalPluginFilter:
         assert manager.is_loaded("shouldalsoload") is False
         global_plugin_filter.exclusions.clear()
 
-    def test_disable_value(self, dummy_plugin_finder):
-        manager = PluginManager("test.plugins.dummy", finder=dummy_plugin_finder)
+    def test_disable_value(self, dummy_plugin_finder: DummyPluginFinder) -> None:
+        manager = PluginManager[DummyPlugin]("test.plugins.dummy", finder=dummy_plugin_finder)
 
         global_plugin_filter.add_exclusion(value="tests.test_manager:*")
 

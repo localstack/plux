@@ -21,7 +21,7 @@ clean-dist: clean
 	rm -rf dist/
 
 lint: venv
-	$(VENV_ACTIVATE); python -m ruff check .
+	$(VENV_ACTIVATE); python -m ruff check . && python -m mypy
 
 format: venv
 	$(VENV_ACTIVATE); python -m ruff format . && python -m ruff check . --fix
