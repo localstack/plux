@@ -200,3 +200,62 @@ def test_entrypoints_with_manual_build_mode():
         with zip.open(entry_points_file) as f:
             lines = [line.decode().strip() for line in f.readlines() if line.strip()]
             assert lines == expected_entry_points
+
+
+def test_hatchling_metadata_hook_with_manual_build_mode():
+    """Test that hatchling metadata hook enriches entry points from plux.ini."""
+    pytest.importorskip("hatchling")
+    from build.__main__ import main as build_main
+
+    from plux.__main__ import main
+
+    project = os.path.join(os.path.dirname(__file__), "projects", "hatchling_manual_mode")
+    os.chdir(project)
+
+    # remove dist dir from previous runs
+    shutil.rmtree(os.path.join(project, "dist"), ignore_errors=True)
+
+    expected_entry_points = [
+        "[plux.test.plugins]",
+        "mynestedplugin = mysrc.subpkg.plugins:MyNestedPlugin",
+        "myplugin = mysrc.plugins:MyPlugin",
+    ]
+
+    sys.path.append(project)
+    try:
+        try:
+            main(["--workdir", project, "entrypoints"])
+        except SystemExit:
+            pass
+    finally:
+        sys.path.remove(project)
+
+    # plux.ini should already exist in the test project
+    ini_file = Path(project, "plux.ini")
+    assert ini_file.exists(), "plux.ini should exist in test project"
+
+    lines = ini_file.read_text().strip().splitlines()
+    assert lines == expected_entry_points
+
+    # build the project with hatchling - the metadata hook should enrich entry points
+    # use --no-isolation to access the local development version of plux with the metadata hook
+    build_main(["--no-isolation"])  # python -m build --no-isolation
+
+    # inspect the wheel
+    wheel_file = glob.glob(os.path.join(project, "dist", "test_hatchling_project-*.whl"))[0]
+    with zipfile.ZipFile(wheel_file, "r") as zip:
+        members = zip.namelist()
+        # find the entry_points.txt in the .dist-info directory
+        entry_points_file = next(
+            (m for m in members if m.endswith(".dist-info/entry_points.txt")), None
+        )
+
+        # Verify that entry_points.txt exists and contains the expected entry points
+        assert entry_points_file is not None, "entry_points.txt should exist in wheel"
+
+        with zip.open(entry_points_file) as f:
+            lines = [line.decode().strip() for line in f.readlines() if line.strip()]
+            assert lines == expected_entry_points, (
+                f"Entry points in wheel don't match expected. "
+                f"Got: {lines}, Expected: {expected_entry_points}"
+            )

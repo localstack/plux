@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling", "plux"]
+build-backend = "hatchling.build"
+
+[project]
+name = "test-hatchling-project"
+authors = [
+    { name = "LocalStack Contributors", email = "info@localstack.cloud" }
+]
+version = "0.1.0"
+description = "A test project to test plux with hatchling and manual build mode"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dynamic = ["entry-points"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mysrc"]
+
+[tool.plux]
+entrypoint_build_mode = "manual"
+
+[tool.hatch.metadata.hooks.plux]
+
+[tool.hatch.build.targets.sdist]
+ignore-vcs = true
