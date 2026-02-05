@@ -1,3 +1,11 @@
+"""
+Hatchling build backend integration for plux.
+
+This module provides integration with hatchling's build system, including a metadata hook plugin
+that enriches project entry-points with data from plux.ini in manual build mode.
+"""
+
+import configparser
 import logging
 import os
 import sys
@@ -6,8 +14,10 @@ from pathlib import Path
 
 from hatchling.builders.config import BuilderConfig
 from hatchling.builders.wheel import WheelBuilder
+from hatchling.metadata.plugin.interface import MetadataHookInterface
+from hatchling.plugin import hookimpl
 
-from plux.build.config import EntrypointBuildMode
+from plux.build.config import EntrypointBuildMode, read_plux_config_from_workdir
 from plux.build.discovery import PackageFinder, Filter, MatchAllFilter, SimplePackageFinder
 from plux.build.project import Project
 
@@ -144,3 +154,156 @@ class HatchlingPackageFinder(PackageFinder):
 
     def filter_packages(self, packages: t.Iterable[str]) -> t.Iterable[str]:
         return [item for item in packages if not self.exclude(item) and self.include(item)]
+
+
+def _parse_plux_ini(path: str) -> dict[str, dict[str, str]]:
+    """Parse a plux.ini file and return entry points as a nested dictionary.
+
+    The parser uses ``delimiters=('=',)`` to ensure that only the equals sign is treated as a delimiter.
+    This is critical because plugin names may contain colons, which are the default delimiter in
+    configparser along with equals.
+    """
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"plux.ini file not found at {path}")
+
+    # Use delimiters=('=',) to prevent colons in plugin names from being treated as delimiters
+    parser = configparser.ConfigParser(delimiters=("=",))
+    parser.read(path)
+
+    # Convert ConfigParser to nested dict format
+    result = {}
+    for section in parser.sections():
+        result[section] = dict(parser.items(section))
+
+    return result
+
+
+def _merge_entry_points(target: dict, source: dict) -> None:
+    """Merge entry points from source into target dictionary.
+
+    For each group in source:
+    - If the group doesn't exist in target, it's added
+    - If the group exists, entries are merged (source entries overwrite target entries with same name)
+    """
+    for group, entries in source.items():
+        if group not in target:
+            target[group] = {}
+        target[group].update(entries)
+
+
+class PluxMetadataHook(MetadataHookInterface):
+    """Hatchling metadata hook that enriches entry-points with data from plux.ini.
+
+    This hook only activates when ``entrypoint_build_mode = "manual"`` is set in the ``[tool.plux]``
+    section of pyproject.toml. When active, it reads the plux.ini file (default location or as
+    specified by ``entrypoint_static_file``) and merges the discovered entry points into the
+    project metadata.
+
+    Configuration in consumer projects::
+
+        [tool.plux]
+        entrypoint_build_mode = "manual"
+        entrypoint_static_file = "plux.ini"  # optional, defaults to "plux.ini"
+
+        [tool.hatch.metadata.hooks.plux]
+        # Empty section is sufficient to activate the hook
+
+    The plux.ini file format::
+
+        [entry.point.group]
+        entry_name = module.path:object
+        another_entry = module.path:AnotherObject
+
+    When parsing plux.ini, the hook uses ``ConfigParser(delimiters=('=',))`` to ensure that only
+    the equals sign is treated as a delimiter. This is critical because plugin names may contain
+    colons.
+    """
+
+    PLUGIN_NAME = "plux"
+
+    def update(self, metadata: dict) -> None:
+        """Update project metadata by enriching entry-points with data from plux.ini.
+
+        This method performs the following steps:
+
+        1. Reads the plux configuration from ``[tool.plux]`` in pyproject.toml
+        2. Checks if ``entrypoint_build_mode`` is ``"manual"``
+        3. If not manual mode, raises an exception
+        4. Reads and parses the plux.ini file
+        5. Merges the parsed entry points into ``metadata["entry-points"]``
+
+        :param metadata: The project metadata dictionary to update in-place. Entry points are
+                       stored in ``metadata["entry-points"]`` as a nested dict where keys are
+                       entry point groups and values are dicts of entry name -> value.
+        :type metadata: dict
+        :raises RuntimeError: If the build mode is not ``"manual"``
+        :raises ValueError: If plux.ini has invalid syntax
+        """
+        # Read plux configuration from pyproject.toml
+        try:
+            cfg = read_plux_config_from_workdir(self.root)
+        except Exception as e:
+            # If we can't read config, use defaults and log warning
+            LOG.warning(f"Failed to read plux configuration, using defaults: {e}")
+            from plux.build.config import PluxConfiguration
+
+            cfg = PluxConfiguration()
+
+        # Only activate hook in manual mode
+        if cfg.entrypoint_build_mode != EntrypointBuildMode.MANUAL:
+            raise RuntimeError(
+                "The Hatchling metadata build hook is currently only supported for "
+                "`entrypoint_build_mode=manual`"
+            )
+
+        # Construct path to plux.ini
+        plux_ini_path = os.path.join(self.root, cfg.entrypoint_static_file)
+
+        # Parse plux.ini
+        try:
+            entry_points = _parse_plux_ini(plux_ini_path)
+        except FileNotFoundError:
+            # Log warning but don't fail build - allows incremental adoption
+            LOG.warning(
+                f"plux.ini not found at {plux_ini_path}. "
+                f"In manual mode, you should generate it with: python -m plux entrypoints"
+            )
+            return
+        except configparser.Error as e:
+            # Invalid format is a user error - fail the build with clear message
+            raise ValueError(
+                f"Failed to parse plux.ini at {plux_ini_path}. "
+                f"Please check the file format. Error: {e}"
+            ) from e
+
+        if not entry_points:
+            LOG.info(f"No entry points found in {plux_ini_path}")
+            return
+
+        # Initialize entry-points in metadata if not present
+        if "entry-points" not in metadata:
+            metadata["entry-points"] = {}
+
+        # Merge entry points from plux.ini
+        _merge_entry_points(metadata["entry-points"], entry_points)
+
+        LOG.info(
+            f"Enriched entry-points from {plux_ini_path}: "
+            f"added {sum(len(v) for v in entry_points.values())} entry points "
+            f"across {len(entry_points)} groups"
+        )
+
+@hookimpl
+def hatch_register_metadata_hook():
+    """Register the PluxMetadataHook with hatchling.
+
+    This function is called by hatchling's plugin system to discover and register
+    the metadata hook. The hook is registered via the entry point::
+
+        [project.entry-points.hatch]
+        plux = "plux.build.hatchling"
+
+    :return: The PluxMetadataHook class
+    :rtype: type[PluxMetadataHook]
+    """
+    return PluxMetadataHook

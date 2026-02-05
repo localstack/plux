@@ -54,3 +54,6 @@ plugins = "plux.build.setuptools:plugins"
 # this is actually not a writer, it's a reader :-)
 "plux.json" = "plux.build.setuptools:load_plux_entrypoints"
 
+[project.entry-points.hatch]
+plux = "plux.build.hatchling"
+
