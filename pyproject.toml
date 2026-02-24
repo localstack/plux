@@ -35,6 +35,11 @@ dev = [
     "ruff==0.9.1",
     "mypy",
 ]
+docs = [
+    "sphinx",
+    "furo",
+    "myst_parser",
+]
 
 [tool.hatch.build.hooks.vcs]
 version-file = "plux/version.py"
