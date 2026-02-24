@@ -8,7 +8,7 @@ Plux
   <a href="https://github.com/astral-sh/ruff"><img alt="Code style: ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json"></a>
 </p>
 
-plux is the dynamic code loading framework used in [LocalStack](https://github.com/localstack/localstack).
+plux is the dynamic code loading framework used in [LocalStack](https://www.localstack.cloud/).
 
 
 Overview
