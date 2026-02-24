@@ -5,11 +5,12 @@ Buildtool independent utils to discover plugins from the project's source code.
 import importlib
 import inspect
 import logging
-import typing as t
-from fnmatch import fnmatchcase
-from types import ModuleType
 import os
 import pkgutil
+import typing as t
+from fnmatch import fnmatchcase
+from pathlib import Path
+from types import ModuleType
 
 from plux import PluginFinder, PluginSpecResolver, PluginSpec
 
@@ -54,6 +55,107 @@ class PackageFinder:
         :return: A file path
         """
         raise NotImplementedError
+
+
+class SimplePackageFinder(PackageFinder):
+    """
+    A package finder that uses a heuristic to find python packages within a given path. It iterates over all
+    subdirectories in the path and returns every directory that contains a ``__init__.py`` file. It will include the
+    root package in the list of results, so if your tree looks like this::
+
+        mypkg
+        ├── __init__.py
+        ├── subpkg1
+        │   ├── __init__.py
+        │   └── nested_subpkg1
+        │       └── __init__.py
+        └── subpkg2
+            └── __init__.py
+
+    and you instantiate SimplePackageFinder("mypkg"), it will return::
+
+        [
+            "mypkg",
+            "mypkg.subpkg1",
+            "mypkg.subpkg2",
+            "mypkg.subpkg1.nested_subpkg1,
+        ]
+
+    If the root is not a package, say if you have a ``src/`` layout, and you pass "src/mypkg" as ``path`` it will omit
+    everything in the preceding path that's not a package.
+    """
+
+    DEFAULT_EXCLUDES = "__pycache__"
+
+    def __init__(self, path: str):
+        self._path = path
+
+    @property
+    def path(self) -> str:
+        return self._path
+
+    def find_packages(self) -> t.Iterable[str]:
+        """
+        Find all Python packages in the given path.
+
+        Returns a list of package names in the format "pkg", "pkg.subpkg", etc.
+        """
+        path = self.path
+        if not os.path.isdir(path):
+            return []
+
+        result = []
+
+        # Get the absolute path to handle relative paths correctly
+        abs_path = os.path.abspath(path)
+
+        # Check if the root directory is a package
+        root_is_package = self._looks_like_package(abs_path)
+
+        # Walk through the directory tree
+        for root, dirs, files in os.walk(abs_path):
+            # Skip directories that don't look like packages
+            if not self._looks_like_package(root):
+                continue
+
+            # Determine the base directory for relative path calculation
+            # If the root is not a package, we use the root directory itself as the base
+            # This ensures we don't include the root directory name in the package names
+            if root_is_package:
+                base_dir = os.path.dirname(abs_path)
+            else:
+                base_dir = abs_path
+
+            # Convert the path to a module name
+            rel_path = os.path.relpath(root, base_dir)
+            if rel_path == ".":
+                # If we're at the root and it's a package, use the directory name
+                rel_path = os.path.basename(abs_path)
+
+            # skip excludes TODO: should re-use Filter API
+            if os.path.basename(rel_path).strip(os.pathsep) in self.DEFAULT_EXCLUDES:
+                continue
+
+            # Skip invalid package names (those containing dots in the path)
+            if "." in os.path.basename(rel_path):
+                continue
+
+            module_name = self._path_to_module(rel_path)
+            result.append(module_name)
+
+        # Sort the results for consistent output
+        return sorted(result)
+
+    def _looks_like_package(self, path: str) -> bool:
+        return os.path.exists(os.path.join(path, "__init__.py"))
+
+    @staticmethod
+    def _path_to_module(path: str):
+        """
+        Convert a path to a Python module to its module representation
+        Example: plux/core/test -> plux.core.test
+        """
+        return ".".join(Path(path).with_suffix("").parts)
 
 
 class PluginFromPackageFinder(PluginFinder):
