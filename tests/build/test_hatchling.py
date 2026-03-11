@@ -3,7 +3,6 @@ Unit tests for hatchling metadata hook plugin.
 """
 
 import configparser
-from pathlib import Path
 
 import pytest
 
@@ -229,9 +228,7 @@ class TestPluxMetadataHook:
 
         # Entry points should be added
         assert "entry-points" in metadata
-        assert metadata["entry-points"] == {
-            "plux.test.plugins": {"myplugin": "mysrc.plugins:MyPlugin"}
-        }
+        assert metadata["entry-points"] == {"plux.test.plugins": {"myplugin": "mysrc.plugins:MyPlugin"}}
 
     def test_hook_uses_custom_static_file_name(self, tmp_path):
         """Test that hook uses custom entrypoint_static_file setting."""

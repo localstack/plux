@@ -246,9 +246,7 @@ def test_hatchling_metadata_hook_with_manual_build_mode():
     with zipfile.ZipFile(wheel_file, "r") as zip:
         members = zip.namelist()
         # find the entry_points.txt in the .dist-info directory
-        entry_points_file = next(
-            (m for m in members if m.endswith(".dist-info/entry_points.txt")), None
-        )
+        entry_points_file = next((m for m in members if m.endswith(".dist-info/entry_points.txt")), None)
 
         # Verify that entry_points.txt exists and contains the expected entry points
         assert entry_points_file is not None, "entry_points.txt should exist in wheel"
@@ -256,6 +254,5 @@ def test_hatchling_metadata_hook_with_manual_build_mode():
         with zip.open(entry_points_file) as f:
             lines = [line.decode().strip() for line in f.readlines() if line.strip()]
             assert lines == expected_entry_points, (
-                f"Entry points in wheel don't match expected. "
-                f"Got: {lines}, Expected: {expected_entry_points}"
+                f"Entry points in wheel don't match expected. Got: {lines}, Expected: {expected_entry_points}"
             )

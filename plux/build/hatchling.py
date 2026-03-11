@@ -272,8 +272,7 @@ class PluxMetadataHook(MetadataHookInterface):
         except configparser.Error as e:
             # Invalid format is a user error - fail the build with clear message
             raise ValueError(
-                f"Failed to parse plux.ini at {plux_ini_path}. "
-                f"Please check the file format. Error: {e}"
+                f"Failed to parse plux.ini at {plux_ini_path}. Please check the file format. Error: {e}"
             ) from e
 
         if not entry_points:
@@ -292,6 +291,7 @@ class PluxMetadataHook(MetadataHookInterface):
             f"added {sum(len(v) for v in entry_points.values())} entry points "
             f"across {len(entry_points)} groups"
         )
+
 
 @hookimpl
 def hatch_register_metadata_hook():
