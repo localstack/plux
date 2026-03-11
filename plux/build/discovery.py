@@ -85,7 +85,7 @@ class SimplePackageFinder(PackageFinder):
     everything in the preceding path that's not a package.
     """
 
-    DEFAULT_EXCLUDES = "__pycache__"
+    DEFAULT_EXCLUDES = {"__pycache__"}
 
     def __init__(self, path: str):
         self._path = path

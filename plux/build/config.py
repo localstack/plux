@@ -5,10 +5,13 @@ future to support ``tox.ini``, ``setup.cfg``, etc.
 
 import dataclasses
 import enum
+import logging
 import os
 import sys
 from importlib.util import find_spec
 from typing import Any
+
+LOG = logging.getLogger(__name__)
 
 
 class EntrypointBuildMode(enum.Enum):
@@ -208,6 +211,16 @@ def determine_build_backend_from_config(workdir: str) -> BuildBackend:
     # if that also fails, just try to import both build backends and return the first one that works
     try:
         import setuptools  # noqa
+
+        try:
+            # Try import here again to log proper warning if both are present in the environment
+            import hatchling
+
+            LOG.warning(
+                "Both setuptools and hatchling build backends available. Please manually choose a build-backend in the plux config. Defaulting to setuptools."
+            )
+        except ImportError:
+            pass
 
         return BuildBackend.SETUPTOOLS
     except ImportError:
