@@ -136,5 +136,8 @@ venv.bak/
 # don't ignore build package
 !plux/build
 
+!tests/build
+plux.ini
+
 # Ignore dynamically generated version.py
 plux/version.py
