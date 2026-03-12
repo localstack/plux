@@ -11,6 +11,15 @@ $(VENV_DIR)/bin/activate: pyproject.toml
 	$(VENV_ACTIVATE); pip install -e ".[dev]"
 	touch $(VENV_DIR)/bin/activate
 
+$(VENV_DIR)/.docs-install: pyproject.toml $(VENV_DIR)/bin/activate
+	$(VENV_ACTIVATE); pip install -e .[docs]
+	touch $(VENV_DIR)/.docs-install
+
+install-docs: $(VENV_DIR)/.docs-install
+
+docs: install-docs
+	$(VENV_ACTIVATE); cd docs && make html
+
 clean:
 	rm -rf build/
 	rm -rf .eggs/
