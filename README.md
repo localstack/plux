@@ -72,16 +72,28 @@ python -m plux entrypoints
 
 This creates a `plux.ini` file in your working directory with the discovered plugins. You can then include this file in your distribution by configuring your `pyproject.toml`:
 
-```toml
-[project]
-dynamic = ["entry-points"]
+- **setuptools:**
+  ```toml
+  [project]
+  dynamic = ["entry-points"]
 
-[tool.setuptools.package-data]
-"*" = ["plux.ini"]
+  [tool.setuptools.package-data]
+  "*" = ["plux.ini"]
 
-[tool.setuptools.dynamic]
-entry-points = {file = ["plux.ini"]}
-```
+  [tool.setuptools.dynamic]
+  entry-points = {file = ["plux.ini"]}
+  ```
+
+- **hatchling:**
+  ```toml
+  [project]
+  dynamic = ["entry-points"]
+
+  [tool.setuptools.package-data]
+  "*" = ["plux.ini"]
+
+  [tool.hatch.metadata.hooks.plux]
+  ```
 
 You can also manually control the output format and location:
 
