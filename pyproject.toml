@@ -28,6 +28,12 @@ dynamic = ["version"]
 Repository = "https://github.com/localstack/plux"
 
 [project.optional-dependencies]
+hatchling = [
+    "hatchling"
+]
+setuptools = [
+    "setuptools"
+]
 dev = [
     "build",
     "setuptools",
