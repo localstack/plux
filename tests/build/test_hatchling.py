@@ -372,3 +372,58 @@ def test_hatch_register_metadata_hook():
     hook_class = hatch_register_metadata_hook()
 
     assert hook_class is PluxMetadataHook
+
+
+class TestHatchlingPackageFinderPath:
+    """Tests for HatchlingPackageFinder.path property."""
+
+    def _make_finder(self, sources, root, packages=None):
+        pytest.importorskip("hatchling")
+        from unittest.mock import MagicMock
+        from plux.build.hatchling import HatchlingPackageFinder
+
+        builder_config = MagicMock()
+        builder_config.sources = sources
+        builder_config.root = root
+        builder_config.packages = packages or []
+        return HatchlingPackageFinder(builder_config)
+
+    def test_path_with_packages_in_subdirectory(self, tmp_path):
+        """Regression test: KeyError when packages live in a subdirectory.
+
+        When hatchling is configured with ``packages = ["localstack-core/localstack"]``,
+        builder_config.sources becomes ``{'localstack-core/': ''}`` — the key is the
+        source directory, not ``''``.  The old code did ``sources[""]`` which raised a
+        KeyError.  The fix must return the sources root (``{root}/localstack-core``)
+        so that ``_list_module_names`` can build correct file-system paths for each
+        discovered package name.
+        """
+        finder = self._make_finder(
+            sources={"localstack-core/": ""},
+            root=str(tmp_path),
+            packages=["localstack-core/localstack"],
+        )
+
+        # Must not raise KeyError, and must return the sources root directory
+        path = finder.path
+        import os
+        assert path == os.path.join(str(tmp_path), "localstack-core")
+
+    def test_path_with_empty_sources(self, tmp_path):
+        """When sources is empty, path falls back to the project root."""
+        finder = self._make_finder(sources={}, root=str(tmp_path))
+
+        assert finder.path == str(tmp_path)
+
+    def test_path_with_packages_in_root(self, tmp_path):
+        """When packages are in the project root (sources = {'': ''}), path returns root."""
+        finder = self._make_finder(sources={"": ""}, root=str(tmp_path))
+
+        assert finder.path == str(tmp_path)
+
+    def test_path_with_src_layout(self, tmp_path):
+        """When sources maps '' -> 'src', path returns the sources root joined to the project root."""
+        import os
+        finder = self._make_finder(sources={"": "src"}, root=str(tmp_path))
+
+        assert finder.path == os.path.join(str(tmp_path), "src")

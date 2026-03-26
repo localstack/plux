@@ -114,9 +114,11 @@ class HatchlingPackageFinder(PackageFinder):
         for relative_package_path in package_paths:
             package_name = os.path.basename(relative_package_path)
 
+            # Package paths in hatchling are always relative to the project root, so we join
+            # with the project root (not self.path, which is the sources root).
             package_path = os.path.join(
-                self.path, relative_package_path
-            )  # build package path within sources root
+                self.builder_config.root, relative_package_path
+            )
             if not os.path.isdir(package_path):
                 continue
 
@@ -141,16 +143,38 @@ class HatchlingPackageFinder(PackageFinder):
 
     @property
     def path(self) -> str:
-        if not self.builder_config.sources:
-            where = self.builder_config.root
-        else:
-            if self.builder_config.sources[""]:
-                where = self.builder_config.sources[""]
-            else:
-                LOG.warning("plux doesn't know how to resolve multiple sources directories")
-                where = self.builder_config.root
+        """Return the sources root — the directory under which the package names are located.
 
-        return where
+        This is used by ``PluginFromPackageFinder._list_module_names`` to construct the
+        file-system path for each package name, so it must point to the directory that
+        *contains* the top-level packages (not the project root in general).
+
+        Hatchling's ``sources`` dict maps ``{source_dir: dest_dir_in_wheel}``:
+
+        - ``{"": "src"}``  — explicit src-layout: source root is ``src/``
+        - ``{"localstack-core/": ""}`` — packages in a subdirectory: source root is
+          ``localstack-core/`` (the key, not the value)
+        - ``{"": ""}``  — packages directly in the project root
+        """
+        root = self.builder_config.root
+
+        if not self.builder_config.sources:
+            return root
+
+        source_root = self.builder_config.sources.get("")
+        if source_root:
+            # Explicit mapping: "" -> "src" (or similar).  The value is the source dir.
+            return os.path.join(root, source_root)
+
+        # No "" key.  The keys themselves are source directories (e.g. "localstack-core/").
+        # Filter out any empty-string key that slipped through, strip trailing separators.
+        source_dirs = [k.rstrip("/") for k in self.builder_config.sources.keys() if k]
+        if len(source_dirs) == 1:
+            return os.path.join(root, source_dirs[0])
+
+        if source_dirs:
+            LOG.warning("plux doesn't know how to resolve multiple sources directories")
+        return root
 
     def filter_packages(self, packages: t.Iterable[str]) -> t.Iterable[str]:
         return [item for item in packages if not self.exclude(item) and self.include(item)]
