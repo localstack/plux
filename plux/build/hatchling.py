@@ -81,6 +81,7 @@ class HatchlingPackageFinder(PackageFinder):
     Uses hatchling's BuilderConfig abstraction to enumerate packages.
 
     TODO: include/exclude configuration of packages in hatch needs more thorough testing with different scenarios.
+    TODO: hatchling supports path rewrites with the sources config, which is currently not supported
     """
 
     builder_config: BuilderConfig
@@ -116,9 +117,9 @@ class HatchlingPackageFinder(PackageFinder):
 
             # Package paths in hatchling are always relative to the project root, so we join
             # with the project root (not self.path, which is the sources root).
-            package_path = os.path.join(
+            package_path = str(os.path.join(
                 self.builder_config.root, relative_package_path
-            )
+            ))
             if not os.path.isdir(package_path):
                 continue
 
@@ -150,8 +151,6 @@ class HatchlingPackageFinder(PackageFinder):
         *contains* the top-level packages (not the project root in general).
 
         Hatchling's ``sources`` dict maps ``{source_dir: dest_dir_in_wheel}``:
-
-        - ``{"": "src"}``  — explicit src-layout: source root is ``src/``
         - ``{"localstack-core/": ""}`` — packages in a subdirectory: source root is
           ``localstack-core/`` (the key, not the value)
         - ``{"": ""}``  — packages directly in the project root
@@ -161,16 +160,11 @@ class HatchlingPackageFinder(PackageFinder):
         if not self.builder_config.sources:
             return root
 
-        source_root = self.builder_config.sources.get("")
-        if source_root:
-            # Explicit mapping: "" -> "src" (or similar).  The value is the source dir.
-            return os.path.join(root, source_root)
-
         # No "" key.  The keys themselves are source directories (e.g. "localstack-core/").
         # Filter out any empty-string key that slipped through, strip trailing separators.
         source_dirs = [k.rstrip("/") for k in self.builder_config.sources.keys() if k]
         if len(source_dirs) == 1:
-            return os.path.join(root, source_dirs[0])
+            return os.path.join(root, str(source_dirs[0]))
 
         if source_dirs:
             LOG.warning("plux doesn't know how to resolve multiple sources directories")

@@ -420,10 +420,3 @@ class TestHatchlingPackageFinderPath:
         finder = self._make_finder(sources={"": ""}, root=str(tmp_path))
 
         assert finder.path == str(tmp_path)
-
-    def test_path_with_src_layout(self, tmp_path):
-        """When sources maps '' -> 'src', path returns the sources root joined to the project root."""
-        import os
-        finder = self._make_finder(sources={"": "src"}, root=str(tmp_path))
-
-        assert finder.path == os.path.join(str(tmp_path), "src")
