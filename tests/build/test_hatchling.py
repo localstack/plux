@@ -407,6 +407,7 @@ class TestHatchlingPackageFinderPath:
         # Must not raise KeyError, and must return the sources root directory
         path = finder.path
         import os
+
         assert path == os.path.join(str(tmp_path), "localstack-core")
 
     def test_path_with_empty_sources(self, tmp_path):
@@ -420,3 +421,16 @@ class TestHatchlingPackageFinderPath:
         finder = self._make_finder(sources={"": ""}, root=str(tmp_path))
 
         assert finder.path == str(tmp_path)
+
+    def test_path_single_source_non_empty_dest_dir_falls_back_to_root(self, tmp_path):
+        """When a single source has a non-empty dest dir, fall back to project root.
+
+        A mapping like ``{"src/": "lib/"}`` means the wheel destination is remapped,
+        which plux cannot reason about — so it must return the project root and warn.
+        """
+
+        finder = self._make_finder(sources={"src/": "lib/"}, root=str(tmp_path))
+
+        path = finder.path
+
+        assert path == str(tmp_path)

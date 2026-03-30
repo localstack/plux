@@ -117,9 +117,7 @@ class HatchlingPackageFinder(PackageFinder):
 
             # Package paths in hatchling are always relative to the project root, so we join
             # with the project root (not self.path, which is the sources root).
-            package_path = str(os.path.join(
-                self.builder_config.root, relative_package_path
-            ))
+            package_path = str(os.path.join(self.builder_config.root, relative_package_path))
             if not os.path.isdir(package_path):
                 continue
 
@@ -157,17 +155,24 @@ class HatchlingPackageFinder(PackageFinder):
         """
         root = self.builder_config.root
 
+        # If no sources are configured, we assume the sources root is the project root
         if not self.builder_config.sources:
             return root
 
-        # No "" key.  The keys themselves are source directories (e.g. "localstack-core/").
-        # Filter out any empty-string key that slipped through, strip trailing separators.
-        source_dirs = [k.rstrip("/") for k in self.builder_config.sources.keys() if k]
+        # The keys themselves are source directories (e.g. "localstack-core/").
+        # Filter out any empty-string keys, strip trailing separators.
+        source_dirs = {k.rstrip("/"): v for k, v in self.builder_config.sources.items() if k}
         if len(source_dirs) == 1:
-            return os.path.join(root, str(source_dirs[0]))
+            source_dir, dest_dir = next(iter(source_dirs.items()))
+            if dest_dir:
+                LOG.warning(
+                    "plux doesn't know how to resolve sources with non-empty destination directories, using root dir."
+                )
+            else:
+                return os.path.join(root, str(source_dir))
 
         if source_dirs:
-            LOG.warning("plux doesn't know how to resolve multiple sources directories")
+            LOG.warning("plux doesn't know how to resolve multiple sources directories, using root dir.")
         return root
 
     def filter_packages(self, packages: t.Iterable[str]) -> t.Iterable[str]:
