@@ -37,7 +37,7 @@ setuptools = [
 dev = [
     "plux[hatchling,setuptools]",
     "build",
-    "pytest==8.4.1",
+    "pytest==9.0.3",
     "ruff==0.9.1",
     "mypy",
 ]
