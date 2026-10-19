@@ -23,7 +23,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Topic :: Utilities"
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dynamic = ["version"]
 
 [project.urls]
@@ -52,7 +52,7 @@ source = "vcs"
 
 [tool.ruff]
 line-length = 110
-target-version = "py310"
+target-version = "py311"
 
 # integrations with setuptools
 
